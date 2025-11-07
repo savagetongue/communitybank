@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { Member, Offer, Booking, LedgerEntry, ServiceRequest } from "@shared/types";
+import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating } from "@shared/types";
 export class MemberEntity extends IndexedEntity<Member> {
   static readonly entityName = "member";
   static readonly indexName = "members";
@@ -192,6 +192,18 @@ export class ServiceRequestEntity extends IndexedEntity<ServiceRequest> {
         offerId: "",
         memberId: "",
         status: 'PENDING',
+        createdAt: "",
+    };
+}
+export class RatingEntity extends IndexedEntity<Rating> {
+    static readonly entityName = "rating";
+    static readonly indexName = "ratings";
+    static readonly initialState: Rating = {
+        id: "",
+        bookingId: "",
+        raterId: "",
+        ratedId: "",
+        score: 3,
         createdAt: "",
     };
 }

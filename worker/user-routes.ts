@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { ok, bad, notFound, unauthorized } from './core-utils';
-import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity, ServiceRequestEntity } from './entities';
-import type { Member, Offer, Booking, LedgerEntry, ServiceRequest } from "@shared/types";
+import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity, ServiceRequestEntity, RatingEntity } from './entities';
+import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating } from "@shared/types";
 import { Context } from "hono";
 // --- Helper Functions ---
 // Simple (and insecure) password hashing. In a real app, use a library like bcrypt.
@@ -56,7 +56,7 @@ const authMiddleware = async (c: Context<AuthContext>, next: () => Promise<void>
     if (!userId) {
         return unauthorized(c, 'Invalid token');
     }
-    const memberInstance = new MemberEntity(c.env, userId);
+    const memberInstance = new MemberEntity(c.env as Env, userId);
     if (!(await memberInstance.exists())) {
         return unauthorized(c, 'User not found');
     }
@@ -69,9 +69,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   // Ensure seed data is present
   app.use('/api/*', async (c, next) => {
     await Promise.all([
-        MemberEntity.ensureSeed(c.env),
-        OfferEntity.ensureSeed(c.env),
-        LedgerEntryEntity.ensureSeed(c.env),
+        MemberEntity.ensureSeed(c.env as Env),
+        OfferEntity.ensureSeed(c.env as Env),
+        LedgerEntryEntity.ensureSeed(c.env as Env),
     ]);
     await next();
   });
@@ -93,7 +93,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         isProvider: false,
         rating: 0,
     };
-    await MemberEntity.create(c.env, newMember);
+    await MemberEntity.create(c.env as Env, newMember);
     const token = generateToken(id);
     const { passwordHash: _, ...memberData } = newMember;
     return ok(c, { member: memberData, token });
@@ -104,7 +104,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         return bad(c, 'Email and password are required');
     }
     // This is highly inefficient. In a real app, you'd have an index on email.
-    const { items: allMembers } = await MemberEntity.list(c.env);
+    const { items: allMembers } = await MemberEntity.list(c.env as Env);
     const memberState = allMembers.find(m => m.email === email);
     if (!memberState) {
         return unauthorized(c, 'Invalid credentials');
@@ -121,31 +121,31 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, { member: memberData, token });
   });
   app.get('/api/offers', async (c) => {
-    const { items: offers } = await OfferEntity.list(c.env);
+    const { items: offers } = await OfferEntity.list(c.env as Env);
     const activeOffers = offers.filter(o => o.isActive);
-    const denormalized = await denormalizeOffers(c.env, activeOffers);
+    const denormalized = await denormalizeOffers(c.env as Env, activeOffers);
     return ok(c, denormalized);
   });
   app.get('/api/offers/featured', async (c) => {
-    const { items: offers } = await OfferEntity.list(c.env, null, 10);
+    const { items: offers } = await OfferEntity.list(c.env as Env, null, 10);
     const activeOffers = offers.filter(o => o.isActive).slice(0, 3);
-    const denormalized = await denormalizeOffers(c.env, activeOffers);
+    const denormalized = await denormalizeOffers(c.env as Env, activeOffers);
     return ok(c, denormalized);
   });
   app.get('/api/offers/:id', async (c) => {
     const { id } = c.req.param();
     if (!id) return bad(c, 'ID is required');
-    const offerInstance = new OfferEntity(c.env, id);
+    const offerInstance = new OfferEntity(c.env as Env, id);
     if (!(await offerInstance.exists())) {
         return notFound(c, 'Offer not found');
     }
     const offer = await offerInstance.getState();
-    const denormalized = await denormalizeOffers(c.env, [offer]);
+    const denormalized = await denormalizeOffers(c.env as Env, [offer]);
     return ok(c, denormalized[0]);
   });
   app.get('/api/members/:id', async (c) => {
     const { id } = c.req.param();
-    const memberInstance = new MemberEntity(c.env, id);
+    const memberInstance = new MemberEntity(c.env as Env, id);
     if (!(await memberInstance.exists())) {
         return notFound(c, 'Member not found');
     }
@@ -158,7 +158,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
                       .use('/api/offers', authMiddleware)
                       .use('/api/requests', authMiddleware)
                       .use('/api/bookings', authMiddleware)
-                      .use('/api/bookings/*', authMiddleware);
+                      .use('/api/bookings/*', authMiddleware)
+                      .use('/api/ratings', authMiddleware);
   app_auth.get('/api/me', async (c: Context<AuthContext>) => {
     const member = c.get('currentUser');
     const { passwordHash: _, ...memberData } = member;
@@ -167,7 +168,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app_auth.put('/api/me', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
     const { name, bio, contact } = await c.req.json();
-    const memberInstance = new MemberEntity(c.env, userId);
+    const memberInstance = new MemberEntity(c.env as Env, userId);
     await memberInstance.patch({ name, bio, contact });
     const updatedMember = await memberInstance.getState();
     const { passwordHash: _, ...memberData } = updatedMember;
@@ -175,19 +176,19 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app_auth.get('/api/me/bookings', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    const { items: allBookings } = await BookingEntity.list(c.env);
+    const { items: allBookings } = await BookingEntity.list(c.env as Env);
     const userBookings = allBookings.filter(b => b.memberId === userId || b.providerId === userId);
     return ok(c, userBookings);
   });
   app_auth.get('/api/me/offers', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    const { items: allOffers } = await OfferEntity.list(c.env);
+    const { items: allOffers } = await OfferEntity.list(c.env as Env);
     const userOffers = allOffers.filter(o => o.providerId === userId);
     return ok(c, userOffers);
   });
   app_auth.get('/api/me/ledger', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    const { items: allEntries } = await LedgerEntryEntity.list(c.env);
+    const { items: allEntries } = await LedgerEntryEntity.list(c.env as Env);
     const userEntries = allEntries.filter(l => l.memberId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const balance = userEntries.length > 0 ? userEntries[0].balanceAfter : 0;
@@ -209,7 +210,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         isActive: true,
         createdAt: new Date().toISOString(),
     };
-    await OfferEntity.create(c.env, newOffer);
+    await OfferEntity.create(c.env as Env, newOffer);
     return ok(c, newOffer);
   });
   app_auth.post('/api/requests', async (c: Context<AuthContext>) => {
@@ -224,7 +225,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         status: 'PENDING',
         createdAt: new Date().toISOString(),
     };
-    await ServiceRequestEntity.create(c.env, newRequest);
+    await ServiceRequestEntity.create(c.env as Env, newRequest);
     return ok(c, newRequest);
   });
   app_auth.post('/api/bookings', async (c: Context<AuthContext>) => {
@@ -233,7 +234,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     if (!requestId || !startTime || !durationMinutes || !offerId) {
         return bad(c, 'Request ID, start time, duration, and offer ID are required');
     }
-    const offerInstance = new OfferEntity(c.env, offerId);
+    const offerInstance = new OfferEntity(c.env as Env, offerId);
     if (!(await offerInstance.exists())) {
         return notFound(c, 'Associated offer not found');
     }
@@ -249,13 +250,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         escrowId: `escrow-${crypto.randomUUID()}`,
         createdAt: new Date().toISOString(),
     };
-    await BookingEntity.create(c.env, newBooking);
+    await BookingEntity.create(c.env as Env, newBooking);
     return ok(c, newBooking);
   });
   app_auth.post('/api/bookings/:id/complete', async (c: Context<AuthContext>) => {
     const { id: bookingId } = c.req.param();
     const currentUserId = c.get('currentUserId');
-    const bookingInstance = new BookingEntity(c.env, bookingId);
+    const bookingInstance = new BookingEntity(c.env as Env, bookingId);
     if (!await bookingInstance.exists()) {
         return notFound(c, 'Booking not found');
     }
@@ -267,15 +268,15 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         return bad(c, `Booking cannot be completed. Current status: ${booking.status}`);
     }
     // This is inefficient. In a real app, the offerId would be on the booking.
-    const serviceRequestInstance = new ServiceRequestEntity(c.env, booking.requestId);
+    const serviceRequestInstance = new ServiceRequestEntity(c.env as Env, booking.requestId);
     const serviceRequest = await serviceRequestInstance.getState();
-    const offerInstance = new OfferEntity(c.env, serviceRequest.offerId);
+    const offerInstance = new OfferEntity(c.env as Env, serviceRequest.offerId);
     const offer = await offerInstance.getState();
     const amount = (offer.ratePerHour * booking.durationMinutes) / 60;
     // --- ATOMIC LEDGER UPDATE (Simulated) ---
     // In a real DB, this would be a transaction. Here we do it sequentially.
     // 1. Debit the member
-    const { items: memberLedger } = await LedgerEntryEntity.list(c.env);
+    const { items: memberLedger } = await LedgerEntryEntity.list(c.env as Env);
     const memberLastEntry = memberLedger.filter(e => e.memberId === booking.memberId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     const memberBalanceBefore = memberLastEntry ? memberLastEntry.balanceAfter : 0;
     const debitEntry: LedgerEntry = {
@@ -288,9 +289,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         notes: `Payment for "${offer.title}"`,
         createdAt: new Date().toISOString(),
     };
-    await LedgerEntryEntity.create(c.env, debitEntry);
+    await LedgerEntryEntity.create(c.env as Env, debitEntry);
     // 2. Credit the provider
-    const { items: providerLedger } = await LedgerEntryEntity.list(c.env);
+    const { items: providerLedger } = await LedgerEntryEntity.list(c.env as Env);
     const providerLastEntry = providerLedger.filter(e => e.memberId === booking.providerId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
     const providerBalanceBefore = providerLastEntry ? providerLastEntry.balanceAfter : 0;
     const creditEntry: LedgerEntry = {
@@ -303,9 +304,35 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         notes: `Received for "${offer.title}"`,
         createdAt: new Date().toISOString(),
     };
-    await LedgerEntryEntity.create(c.env, creditEntry);
+    await LedgerEntryEntity.create(c.env as Env, creditEntry);
     // 3. Update booking status
     await bookingInstance.patch({ status: 'COMPLETED' });
     return ok(c, { status: 'ok', bookingId, ledgerEntries: [debitEntry.id, creditEntry.id] });
+  });
+  app_auth.post('/api/ratings', async (c: Context<AuthContext>) => {
+    const raterId = c.get('currentUserId');
+    const { bookingId, score, comment } = await c.req.json();
+    if (!bookingId || !score) {
+        return bad(c, 'Booking ID and score are required.');
+    }
+    const bookingInstance = new BookingEntity(c.env as Env, bookingId);
+    if (!await bookingInstance.exists()) {
+        return notFound(c, 'Booking not found.');
+    }
+    const booking = await bookingInstance.getState();
+    // Determine who is being rated
+    const ratedId = booking.providerId === raterId ? booking.memberId : booking.providerId;
+    const newRating: Rating = {
+        id: `rating-${crypto.randomUUID()}`,
+        bookingId,
+        raterId,
+        ratedId,
+        score,
+        comment,
+        createdAt: new Date().toISOString(),
+    };
+    await RatingEntity.create(c.env as Env, newRating);
+    // In a real app, you would also update the rated member's average rating here.
+    return ok(c, newRating);
   });
 }

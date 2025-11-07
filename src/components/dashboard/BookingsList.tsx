@@ -12,7 +12,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { api } from '@/lib/api-client';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
-export function BookingsList() {
+interface BookingsListProps {
+  onRateBooking: (booking: Booking) => void;
+}
+export function BookingsList({ onRateBooking }: BookingsListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const user = useAuthStore(s => s.user);
@@ -104,13 +107,16 @@ export function BookingsList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem>Contact Member</DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         {user?.id === booking.providerId && booking.status === 'CONFIRMED' && (
-                          <>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleCompleteBooking(booking.id)}>
                               Complete Service
                             </DropdownMenuItem>
-                          </>
+                        )}
+                        {booking.status === 'COMPLETED' && (
+                           <DropdownMenuItem onClick={() => onRateBooking(booking)}>
+                             Leave a Rating
+                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
