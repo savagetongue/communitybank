@@ -7,38 +7,38 @@ import { OfferCard } from '@/components/OfferCard';
 import { getFeaturedOffers } from '@/lib/mockApi';
 import type { Offer } from '@shared/types';
 import { ArrowRight, Users, Repeat, Award } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';interface CardFooter {id?: string | number;[key: string]: unknown;}interface CardFooterProps {children?: React.ReactNode;className?: string;style?: React.CSSProperties;[key: string]: unknown;}
 export function HomePage() {
   const [featuredOffers, setFeaturedOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    getFeaturedOffers()
-      .then((data) => {
-        setFeaturedOffers(data);
-        setIsLoading(false);
-      })
-      .catch(console.error);
+    getFeaturedOffers().
+    then((data) => {
+      setFeaturedOffers(data);
+      setIsLoading(false);
+    }).
+    catch(console.error);
   }, []);
   const howItWorksSteps = [
-    {
-      icon: Users,
-      title: 'Join the Community',
-      description: 'Sign up and create your profile. List the skills you can offer and what you might need.',
-    },
-    {
-      icon: Repeat,
-      title: 'Exchange Time',
-      description: 'Browse offers from other members. When you provide a service, you earn time credits.',
-    },
-    {
-      icon: Award,
-      title: 'Redeem Credits',
-      description: 'Use your earned time credits to receive services from others in the community. One hour equals one credit.',
-    },
-  ];
+  {
+    icon: Users,
+    title: 'Join the Community',
+    description: 'Sign up and create your profile. List the skills you can offer and what you might need.'
+  },
+  {
+    icon: Repeat,
+    title: 'Exchange Time',
+    description: 'Browse offers from other members. When you provide a service, you earn time credits.'
+  },
+  {
+    icon: Award,
+    title: 'Redeem Credits',
+    description: 'Use your earned time credits to receive services from others in the community. One hour equals one credit.'
+  }];
+
   return (
     <MainLayout>
-      {/* Hero Section */}
+      {}
       <section className="bg-secondary/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 text-center">
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground">
@@ -59,7 +59,7 @@ export function HomePage() {
           </div>
         </div>
       </section>
-      {/* How It Works Section */}
+      {}
       <section id="how-it-works" className="py-16 md:py-24 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
@@ -69,8 +69,8 @@ export function HomePage() {
             </p>
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-3">
-            {howItWorksSteps.map((step, index) => (
-              <Card key={index} className="text-center">
+            {howItWorksSteps.map((step, index) =>
+            <Card key={index} className="text-center">
                 <CardHeader>
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand text-brand-foreground">
                     <step.icon className="h-6 w-6" />
@@ -81,11 +81,11 @@ export function HomePage() {
                   <p className="text-muted-foreground">{step.description}</p>
                 </CardContent>
               </Card>
-            ))}
+            )}
           </div>
         </div>
       </section>
-      {/* Featured Offers Section */}
+      {}
       <section className="py-16 md:py-24 bg-secondary/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
@@ -102,9 +102,9 @@ export function HomePage() {
             </Button>
           </div>
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {isLoading
-              ? Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i} className="h-full flex flex-col">
+            {isLoading ?
+            Array.from({ length: 3 }).map((_, i) =>
+            <Card key={i} className="h-full flex flex-col">
                     <CardHeader>
                       <Skeleton className="h-6 w-3/4" />
                     </CardHeader>
@@ -124,11 +124,11 @@ export function HomePage() {
                       <Skeleton className="h-6 w-16" />
                     </CardFooter>
                   </Card>
-                ))
-              : featuredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
+            ) :
+            featuredOffers.map((offer) => <OfferCard key={offer.id} offer={offer} />)}
           </div>
         </div>
       </section>
-    </MainLayout>
-  );
+    </MainLayout>);
+
 }
