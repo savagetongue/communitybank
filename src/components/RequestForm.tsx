@@ -10,17 +10,16 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { createRequest } from '@/lib/mockApi';
 import { toast } from 'sonner';
-import type { Offer, ServiceRequest } from '@shared/types';
+import type { Offer } from '@shared/types';
 import { Clock } from 'lucide-react';
-import { api } from '@/lib/api-client';
 interface RequestFormProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   offer: Offer | null;
-  onSuccess?: (requestId: string) => void;
 }
-export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestFormProps) {
+export function RequestForm({ isOpen, onOpenChange, offer }: RequestFormProps) {
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,16 +27,12 @@ export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestF
     if (!offer) return;
     setIsSubmitting(true);
     try {
-      const response = await api<ServiceRequest>('/api/requests', {
-        method: 'POST',
-        body: JSON.stringify({ offerId: offer.id, note }),
-      });
+      await createRequest({ offerId: offer.id, note });
       toast.success('Service requested successfully!');
+      onOpenChange(false);
       setNote('');
-      onSuccess?.(response.id);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send request.';
-      toast.error(errorMessage);
+      toast.error('Failed to send request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -50,7 +45,7 @@ export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestF
           <DialogHeader>
             <DialogTitle>Request Service</DialogTitle>
             <DialogDescription>
-              You are about to request "{offer.title}" from {offer.providerName}.
+              You are about to request "{offer.title}" from {offer.provider?.name}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
