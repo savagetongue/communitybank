@@ -7,26 +7,30 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
+import { api } from '@/lib/api-client';
+import type { AuthResponse } from '@shared/types';
 export function LoginPage() {
   const navigate = useNavigate();
   const login = useAuthStore(s => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      try {
-        login({ email, name: 'Demo User' });
-        toast.success('Login successful!');
-        navigate('/dashboard');
-      } catch (error) {
-        toast.error('Invalid credentials. Please try again.');
-        setIsLoading(false);
-      }
-    }, 1000);
+    try {
+      const authResponse = await api<AuthResponse>('/api/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      login(authResponse);
+      toast.success('Login successful!');
+      navigate('/dashboard');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Invalid credentials. Please try again.';
+      toast.error(errorMessage);
+      setIsLoading(false);
+    }
   };
   return (
     <MainLayout>

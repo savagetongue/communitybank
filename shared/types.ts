@@ -3,6 +3,10 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
 }
+export interface AuthResponse {
+  member: Member;
+  token?: string;
+}
 export interface Member {
   id: string;
   name: string;
@@ -13,6 +17,7 @@ export interface Member {
   rating: number;
   isProvider: boolean;
   createdAt: string;
+  passwordHash?: string;
 }
 export interface Offer {
   id: string;

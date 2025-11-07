@@ -46,7 +46,7 @@ export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestF
           <DialogHeader>
             <DialogTitle>Request Service</DialogTitle>
             <DialogDescription>
-              You are about to request "{offer.title}" from {offer.provider?.name}.
+              You are about to request "{offer.title}" from {offer.providerName}.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">

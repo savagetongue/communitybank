@@ -10,6 +10,7 @@ export class MemberEntity extends IndexedEntity<Member> {
     rating: 0,
     isProvider: false,
     createdAt: "",
+    passwordHash: "",
   };
   static readonly seedData: ReadonlyArray<Member> = [
     {
@@ -21,6 +22,7 @@ export class MemberEntity extends IndexedEntity<Member> {
       rating: 4.9,
       isProvider: true,
       createdAt: new Date().toISOString(),
+      passwordHash: 'hashed_password_placeholder',
     },
     {
       id: 'provider-2',
@@ -31,6 +33,7 @@ export class MemberEntity extends IndexedEntity<Member> {
       rating: 4.8,
       isProvider: true,
       createdAt: new Date().toISOString(),
+      passwordHash: 'hashed_password_placeholder',
     },
     {
       id: 'provider-3',
@@ -41,6 +44,7 @@ export class MemberEntity extends IndexedEntity<Member> {
       rating: 5.0,
       isProvider: true,
       createdAt: new Date().toISOString(),
+      passwordHash: 'hashed_password_placeholder',
     },
     {
       id: 'provider-4',
@@ -51,6 +55,7 @@ export class MemberEntity extends IndexedEntity<Member> {
       rating: 4.7,
       isProvider: true,
       createdAt: new Date().toISOString(),
+      passwordHash: 'hashed_password_placeholder',
     },
   ];
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { api } from '@/lib/api-client';
-import type { Offer } from '@shared/types';
+import type { Offer, Member } from '@shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,16 +16,22 @@ import { BookingFlow } from '@/components/BookingFlow';
 export function OfferDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [offer, setOffer] = useState<Offer | null>(null);
+  const [provider, setProvider] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
   const [isBookingFlowOpen, setIsBookingFlowOpen] = useState(false);
   const user = useAuthStore(s => s.user);
   useEffect(() => {
     if (id) {
+      setIsLoading(true);
       api<Offer>(`/api/offers/${id}`)
-        .then((data) => {
-          if (data) {
-            setOffer(data);
+        .then((offerData) => {
+          if (offerData) {
+            setOffer(offerData);
+            // Fetch full provider details
+            api<Member>(`/api/members/${offerData.providerId}`)
+              .then(setProvider)
+              .catch(console.error);
           }
         })
         .catch(console.error)
@@ -138,7 +144,11 @@ export function OfferDetailsPage() {
                         </div>
                       </div>
                     </div>
-                    {/* Bio is not denormalized yet, so we can't display it here. This is expected. */}
+                    {provider?.bio ? (
+                      <p className="text-sm text-muted-foreground">{provider.bio}</p>
+                    ) : (
+                      <Skeleton className="h-12 w-full" />
+                    )}
                   </CardContent>
                 </Card>
               </div>
