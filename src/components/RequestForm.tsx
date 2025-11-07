@@ -10,15 +10,15 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { createRequest } from '@/lib/mockApi';
 import { toast } from 'sonner';
-import type { Offer } from '@shared/types';
+import type { Offer, ServiceRequest } from '@shared/types';
 import { Clock } from 'lucide-react';
+import { api } from '@/lib/api-client';
 interface RequestFormProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   offer: Offer | null;
-  onSuccess?: () => void;
+  onSuccess?: (requestId: string) => void;
 }
 export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestFormProps) {
   const [note, setNote] = useState('');
@@ -28,12 +28,16 @@ export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestF
     if (!offer) return;
     setIsSubmitting(true);
     try {
-      await createRequest({ offerId: offer.id, note });
+      const response = await api<ServiceRequest>('/api/requests', {
+        method: 'POST',
+        body: JSON.stringify({ offerId: offer.id, note }),
+      });
       toast.success('Service requested successfully!');
       setNote('');
-      onSuccess?.();
+      onSuccess?.(response.id);
     } catch (error) {
-      toast.error('Failed to send request. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send request.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

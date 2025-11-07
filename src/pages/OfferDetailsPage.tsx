@@ -20,6 +20,7 @@ export function OfferDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
   const [isBookingFlowOpen, setIsBookingFlowOpen] = useState(false);
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
   const user = useAuthStore(s => s.user);
   useEffect(() => {
     if (id) {
@@ -40,7 +41,8 @@ export function OfferDetailsPage() {
         });
     }
   }, [id]);
-  const handleRequestSuccess = () => {
+  const handleRequestSuccess = (requestId: string) => {
+    setCurrentRequestId(requestId);
     setIsRequestFormOpen(false);
     setIsBookingFlowOpen(true);
   };
@@ -166,6 +168,7 @@ export function OfferDetailsPage() {
         isOpen={isBookingFlowOpen}
         onOpenChange={setIsBookingFlowOpen}
         offer={offer}
+        requestId={currentRequestId}
       />
     </>
   );

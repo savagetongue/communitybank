@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { ok, bad, notFound, unauthorized } from './core-utils';
-import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity } from './entities';
-import type { Member, Offer, Booking, LedgerEntry } from "@shared/types";
+import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity, ServiceRequestEntity } from './entities';
+import type { Member, Offer, Booking, LedgerEntry, ServiceRequest } from "@shared/types";
 import { Context } from "hono";
 // --- Helper Functions ---
 // Simple (and insecure) password hashing. In a real app, use a library like bcrypt.
@@ -153,7 +153,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, memberData);
   });
   // --- Authenticated Routes ---
-  const app_auth = app.use('/api/me/*', authMiddleware).use('/api/offers', authMiddleware);
+  const app_auth = app.use('/api/me/*', authMiddleware)
+                      .use('/api/offers', authMiddleware)
+                      .use('/api/requests', authMiddleware)
+                      .use('/api/bookings', authMiddleware);
   app_auth.get('/api/me', async (c: Context<AuthContext>) => {
     const member = c.get('currentUser');
     const { passwordHash: _, ...memberData } = member;
@@ -210,5 +213,45 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     };
     await OfferEntity.create(c.env, newOffer);
     return ok(c, newOffer);
+  });
+  app_auth.post('/api/requests', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    const { offerId, note } = await c.req.json();
+    if (!offerId) return bad(c, 'Offer ID is required');
+    const newRequest: ServiceRequest = {
+        id: `req-${crypto.randomUUID()}`,
+        offerId,
+        memberId: userId,
+        note,
+        status: 'PENDING',
+        createdAt: new Date().toISOString(),
+    };
+    await ServiceRequestEntity.create(c.env, newRequest);
+    return ok(c, newRequest);
+  });
+  app_auth.post('/api/bookings', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    const { requestId, startTime, durationMinutes, offerId } = await c.req.json();
+    if (!requestId || !startTime || !durationMinutes || !offerId) {
+        return bad(c, 'Request ID, start time, duration, and offer ID are required');
+    }
+    const offerInstance = new OfferEntity(c.env, offerId);
+    if (!(await offerInstance.exists())) {
+        return notFound(c, 'Associated offer not found');
+    }
+    const offer = await offerInstance.getState();
+    const newBooking: Booking = {
+        id: `booking-${crypto.randomUUID()}`,
+        requestId,
+        providerId: offer.providerId,
+        memberId: userId,
+        startTime,
+        durationMinutes,
+        status: 'CONFIRMED', // Simplified for now
+        escrowId: `escrow-${crypto.randomUUID()}`,
+        createdAt: new Date().toISOString(),
+    };
+    await BookingEntity.create(c.env, newBooking);
+    return ok(c, newBooking);
   });
 }

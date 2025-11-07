@@ -20,7 +20,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { createBooking } from '@/lib/mockApi';
 import { toast } from 'sonner';
 import type { Offer } from '@shared/types';
 import { Clock, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
@@ -28,6 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { api } from '@/lib/api-client';
 const bookingFormSchema = z.object({
   startTime: z.date({
     required_error: "A start date is required.",
@@ -39,8 +39,9 @@ interface BookingFlowProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   offer: Offer | null;
+  requestId: string | null;
 }
-export function BookingFlow({ isOpen, onOpenChange, offer }: BookingFlowProps) {
+export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
@@ -54,19 +55,27 @@ export function BookingFlow({ isOpen, onOpenChange, offer }: BookingFlowProps) {
     return (offer.ratePerHour * duration) / 60;
   }, [offer, duration]);
   async function onSubmit(data: BookingFormValues) {
-    if (!offer) return;
+    if (!offer || !requestId) {
+      toast.error('Missing offer or request information.');
+      return;
+    }
     setIsSubmitting(true);
     try {
-      await createBooking({
-        offerId: offer.id,
-        startTime: data.startTime.toISOString(),
-        durationMinutes: data.durationMinutes,
+      await api('/api/bookings', {
+        method: 'POST',
+        body: JSON.stringify({
+          offerId: offer.id,
+          requestId: requestId,
+          startTime: data.startTime.toISOString(),
+          durationMinutes: data.durationMinutes,
+        }),
       });
       toast.success('Booking confirmed successfully!');
       onOpenChange(false);
       form.reset();
     } catch (error) {
-      toast.error('Failed to confirm booking. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to confirm booking.';
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
