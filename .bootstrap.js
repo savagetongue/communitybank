@@ -78,7 +78,8 @@ function updateWranglerJsonc() {
 
 function runSetupCommands() {
     const commands = [
-    "bun add mysql2"
+    "bun add mysql2",
+    "bun install mysql2"
 ];
     
     if (commands.length === 0) {
