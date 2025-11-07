@@ -180,7 +180,7 @@ const mockLedger: LedgerEntry[] = [
     },
 ];
 const providersMap = new Map(mockProviders.map(p => [p.id, p]));
-const offersWithProviders: Offer[] = mockOffers.map(offer => ({
+const getOffersWithProviders = () => mockOffers.map(offer => ({
   ...offer,
   provider: providersMap.get(offer.providerId),
 }));
@@ -189,13 +189,13 @@ const simulateDelay = <T>(data: T): Promise<T> =>
     setTimeout(() => resolve(data), 500);
   });
 export const getOffers = (): Promise<Offer[]> => {
-  return simulateDelay(offersWithProviders);
+  return simulateDelay(getOffersWithProviders());
 };
 export const getFeaturedOffers = (): Promise<Offer[]> => {
-  return simulateDelay(offersWithProviders.slice(0, 3));
+  return simulateDelay(getOffersWithProviders().slice(0, 3));
 };
 export const getOfferById = (id: string): Promise<Offer | undefined> => {
-  const offer = offersWithProviders.find(o => o.id === id);
+  const offer = getOffersWithProviders().find(o => o.id === id);
   return simulateDelay(offer);
 };
 export const getBookingsByUserId = (userId: string): Promise<Booking[]> => {
@@ -210,4 +210,27 @@ export const getLedgerByUserId = (userId: string): Promise<{ entries: LedgerEntr
     const entries = mockLedger.filter(l => l.memberId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const balance = entries.length > 0 ? entries[0].balanceAfter : 0;
     return simulateDelay({ entries, balance });
+};
+// --- New "Write" Operations ---
+type AddOfferData = Omit<Offer, 'id' | 'providerId' | 'isActive' | 'createdAt'>;
+export const addOffer = (data: AddOfferData): Promise<{ status: 'ok' }> => {
+  console.log('Simulating addOffer with data:', data);
+  const newOffer: Offer = {
+    ...data,
+    id: `offer-${Date.now()}`,
+    providerId: 'provider-1', // Hardcoded for demo
+    isActive: true,
+    createdAt: new Date().toISOString(),
+  };
+  mockOffers.unshift(newOffer); // Add to the start of the list
+  return simulateDelay({ status: 'ok' });
+};
+interface CreateRequestData {
+  offerId: string;
+  note?: string;
+}
+export const createRequest = (data: CreateRequestData): Promise<{ status: 'ok' }> => {
+  console.log('Simulating createRequest with data:', data);
+  // In a real app, you would create a ServiceRequest record here.
+  return simulateDelay({ status: 'ok' });
 };

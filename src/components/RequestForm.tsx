@@ -18,9 +18,8 @@ interface RequestFormProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   offer: Offer | null;
-  onSuccess?: () => void;
 }
-export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestFormProps) {
+export function RequestForm({ isOpen, onOpenChange, offer }: RequestFormProps) {
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,8 +29,8 @@ export function RequestForm({ isOpen, onOpenChange, offer, onSuccess }: RequestF
     try {
       await createRequest({ offerId: offer.id, note });
       toast.success('Service requested successfully!');
+      onOpenChange(false);
       setNote('');
-      onSuccess?.();
     } catch (error) {
       toast.error('Failed to send request. Please try again.');
     } finally {
