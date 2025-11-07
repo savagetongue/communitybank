@@ -1,4 +1,4 @@
-import { getDb } from './db';
+import { getDbConnection } from './db';
 import type { RowDataPacket } from 'mysql2';
 import type { Env } from './core-utils';
 import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating, Dispute } from "@shared/types";
@@ -6,16 +6,16 @@ const SCHEMA_VERSION = 1;
 let dbInitialized = false;
 export async function setupDatabase(env: Env) {
     if (dbInitialized) return;
-    const db = getDb(env);
-    await db.query(`
+    const db = await getDbConnection(env);
+    await (db as any).query(`
         CREATE TABLE IF NOT EXISTS schema_version (
             version INT PRIMARY KEY
         );
     `);
-    const [rows] = await db.query<RowDataPacket[]>('SELECT version FROM schema_version');
+    const [rows] = await (db as any).query('SELECT version FROM schema_version');
     const currentVersion = rows[0]?.version || 0;
     if (currentVersion < SCHEMA_VERSION) {
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS members (
                 id VARCHAR(255) PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -30,7 +30,7 @@ export async function setupDatabase(env: Env) {
                 passwordHash VARCHAR(255) NOT NULL
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS offers (
                 id VARCHAR(255) PRIMARY KEY,
                 providerId VARCHAR(255) NOT NULL,
@@ -43,7 +43,7 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (providerId) REFERENCES members(id)
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS service_requests (
                 id VARCHAR(255) PRIMARY KEY,
                 offerId VARCHAR(255) NOT NULL,
@@ -55,7 +55,7 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (memberId) REFERENCES members(id)
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS bookings (
                 id VARCHAR(255) PRIMARY KEY,
                 requestId VARCHAR(255) NOT NULL,
@@ -72,7 +72,7 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (memberId) REFERENCES members(id)
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS ledger_entries (
                 id VARCHAR(255) PRIMARY KEY,
                 memberId VARCHAR(255) NOT NULL,
@@ -85,7 +85,7 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (memberId) REFERENCES members(id)
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS ratings (
                 id VARCHAR(255) PRIMARY KEY,
                 bookingId VARCHAR(255) NOT NULL,
@@ -99,7 +99,7 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (ratedId) REFERENCES members(id)
             );
         `);
-        await db.query(`
+        await (db as any).query(`
             CREATE TABLE IF NOT EXISTS disputes (
                 id VARCHAR(255) PRIMARY KEY,
                 bookingId VARCHAR(255) NOT NULL,
@@ -111,21 +111,24 @@ export async function setupDatabase(env: Env) {
                 FOREIGN KEY (bookingId) REFERENCES bookings(id)
             );
         `);
-        await db.query('INSERT INTO schema_version (version) VALUES (?) ON DUPLICATE KEY UPDATE version = ?', [SCHEMA_VERSION, SCHEMA_VERSION]);
+        await (db as any).query('INSERT INTO schema_version (version) VALUES (?) ON DUPLICATE KEY UPDATE version = ?', [SCHEMA_VERSION, SCHEMA_VERSION]);
     }
     dbInitialized = true;
 }
 // --- Data Access Functions ---
 export const findMemberByEmail = async (env: Env, email: string): Promise<Member | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM members WHERE email = ?', [email]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM members WHERE email = ?', [email]);
     return (rows[0] as Member) || null;
 };
 export const findMemberById = async (env: Env, id: string): Promise<Member | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM members WHERE id = ?', [id]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM members WHERE id = ?', [id]);
     return (rows[0] as Member) || null;
 };
 export const createMember = async (env: Env, member: Omit<Member, 'createdAt' | 'rating' | 'isProvider'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO members (id, name, email, passwordHash, isAdmin) VALUES (?, ?, ?, ?, ?)',
         [member.id, member.name, member.email, member.passwordHash, member.isAdmin || false]
     );
@@ -133,7 +136,8 @@ export const createMember = async (env: Env, member: Omit<Member, 'createdAt' | 
 export const updateMember = async (env: Env, id: string, data: Partial<Member>): Promise<void> => {
     const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
     const values = Object.values(data);
-    await getDb(env).query(`UPDATE members SET ${fields} WHERE id = ?`, [...values, id]);
+    const db = await getDbConnection(env);
+    await (db as any).query(`UPDATE members SET ${fields} WHERE id = ?`, [...values, id]);
 };
 export const listOffers = async (env: Env, limit?: number): Promise<Offer[]> => {
     const query = `
@@ -144,11 +148,13 @@ export const listOffers = async (env: Env, limit?: number): Promise<Offer[]> => 
         ORDER BY o.createdAt DESC
         ${limit ? `LIMIT ${limit}` : ''}
     `;
-    const [rows] = await getDb(env).query<RowDataPacket[]>(query);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query(query);
     return rows.map((row: any): Offer => ({ ...row, skills: JSON.parse(row.skills || '[]') }));
 };
 export const findOfferById = async (env: Env, id: string): Promise<Offer | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>(`
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query(`
         SELECT o.*, m.name as providerName, m.avatarUrl as providerAvatarUrl, m.rating as providerRating
         FROM offers o
         JOIN members m ON o.providerId = m.id
@@ -159,39 +165,46 @@ export const findOfferById = async (env: Env, id: string): Promise<Offer | null>
     return { ...row, skills: JSON.parse(row.skills || '[]') };
 };
 export const createOffer = async (env: Env, offer: Omit<Offer, 'createdAt'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO offers (id, providerId, title, description, skills, ratePerHour, isActive) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [offer.id, offer.providerId, offer.title, offer.description, JSON.stringify(offer.skills), offer.ratePerHour, offer.isActive]
     );
 };
 export const listOffersByProviderId = async (env: Env, providerId: string): Promise<Offer[]> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM offers WHERE providerId = ? ORDER BY createdAt DESC', [providerId]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM offers WHERE providerId = ? ORDER BY createdAt DESC', [providerId]);
     return rows.map((row: any): Offer => ({ ...row, skills: JSON.parse(row.skills || '[]') }));
 };
 export const createServiceRequest = async (env: Env, request: Omit<ServiceRequest, 'createdAt' | 'status'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO service_requests (id, offerId, memberId, note) VALUES (?, ?, ?, ?)',
         [request.id, request.offerId, request.memberId, request.note]
     );
 };
 export const findServiceRequestById = async (env: Env, id: string): Promise<ServiceRequest | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM service_requests WHERE id = ?', [id]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM service_requests WHERE id = ?', [id]);
     return (rows[0] as ServiceRequest) || null;
 };
 export const createBooking = async (env: Env, booking: Omit<Booking, 'createdAt' | 'status'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO bookings (id, requestId, providerId, memberId, startTime, durationMinutes, escrowId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [booking.id, booking.requestId, booking.providerId, booking.memberId, booking.startTime, booking.durationMinutes, booking.escrowId, 'CONFIRMED']
     );
 };
 export const findBookingById = async (env: Env, id: string): Promise<Booking | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM bookings WHERE id = ?', [id]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM bookings WHERE id = ?', [id]);
     return (rows[0] as Booking) || null;
 };
 export const updateBooking = async (env: Env, id: string, data: Partial<Booking>): Promise<void> => {
     const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
     const values = Object.values(data);
-    await getDb(env).query(`UPDATE bookings SET ${fields} WHERE id = ?`, [...values, id]);
+    const db = await getDbConnection(env);
+    await (db as any).query(`UPDATE bookings SET ${fields} WHERE id = ?`, [...values, id]);
 };
 export const listBookingsByUserId = async (env: Env, userId: string): Promise<any[]> => {
     const query = `
@@ -207,31 +220,37 @@ export const listBookingsByUserId = async (env: Env, userId: string): Promise<an
         WHERE b.providerId = ? OR b.memberId = ?
         ORDER BY b.startTime DESC
     `;
-    const [rows] = await getDb(env).query<RowDataPacket[]>(query, [userId, userId, userId]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query(query, [userId, userId, userId]);
     return rows;
 };
 export const getLastLedgerEntry = async (env: Env, memberId: string): Promise<LedgerEntry | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM ledger_entries WHERE memberId = ? ORDER BY createdAt DESC LIMIT 1', [memberId]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM ledger_entries WHERE memberId = ? ORDER BY createdAt DESC LIMIT 1', [memberId]);
     return (rows[0] as LedgerEntry) || null;
 };
 export const createLedgerEntry = async (env: Env, entry: Omit<LedgerEntry, 'createdAt'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO ledger_entries (id, memberId, amount, txnType, balanceAfter, relatedBookingId, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [entry.id, entry.memberId, entry.amount, entry.txnType, entry.balanceAfter, entry.relatedBookingId, entry.notes]
     );
 };
 export const listLedgerByUserId = async (env: Env, userId: string): Promise<LedgerEntry[]> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM ledger_entries WHERE memberId = ? ORDER BY createdAt DESC', [userId]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM ledger_entries WHERE memberId = ? ORDER BY createdAt DESC', [userId]);
     return rows as LedgerEntry[];
 };
 export const createRating = async (env: Env, rating: Omit<Rating, 'createdAt'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO ratings (id, bookingId, raterId, ratedId, score, comment) VALUES (?, ?, ?, ?, ?, ?)',
         [rating.id, rating.bookingId, rating.raterId, rating.ratedId, rating.score, rating.comment]
     );
 };
 export const createDispute = async (env: Env, dispute: Omit<Dispute, 'createdAt' | 'status'>): Promise<void> => {
-    await getDb(env).query(
+    const db = await getDbConnection(env);
+    await (db as any).query(
         'INSERT INTO disputes (id, bookingId, reason) VALUES (?, ?, ?)',
         [dispute.id, dispute.bookingId, dispute.reason]
     );
@@ -251,15 +270,18 @@ export const listDisputes = async (env: Env): Promise<Dispute[]> => {
         JOIN members p ON b.providerId = p.id
         ORDER BY d.createdAt DESC
     `;
-    const [rows] = await getDb(env).query<RowDataPacket[]>(query);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query(query);
     return rows as Dispute[];
 };
 export const findDisputeById = async (env: Env, id: string): Promise<Dispute | null> => {
-    const [rows] = await getDb(env).query<RowDataPacket[]>('SELECT * FROM disputes WHERE id = ?', [id]);
+    const db = await getDbConnection(env);
+    const [rows] = await (db as any).query('SELECT * FROM disputes WHERE id = ?', [id]);
     return (rows[0] as Dispute) || null;
 };
 export const updateDispute = async (env: Env, id: string, data: Partial<Dispute>): Promise<void> => {
     const fields = Object.keys(data).map(key => `${key} = ?`).join(', ');
     const values = Object.values(data);
-    await getDb(env).query(`UPDATE disputes SET ${fields} WHERE id = ?`, [...values, id]);
+    const db = await getDbConnection(env);
+    await (db as any).query(`UPDATE disputes SET ${fields} WHERE id = ?`, [...values, id]);
 };

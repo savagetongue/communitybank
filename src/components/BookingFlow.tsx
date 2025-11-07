@@ -40,13 +40,13 @@ interface BookingFlowProps {
   requestId: string | null;
 }
 export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingFlowProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       durationMinutes: 60,
     },
   });
+  const { isSubmitting } = form.formState;
   const duration = form.watch('durationMinutes');
   const escrowAmount = useMemo(() => {
     if (!offer || !duration) return 0;
@@ -57,7 +57,6 @@ export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingF
       toast.error('Missing offer or request information.');
       return;
     }
-    setIsSubmitting(true);
     try {
       await api('/api/bookings', {
         method: 'POST',
@@ -74,8 +73,6 @@ export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingF
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to confirm booking.';
       toast.error(errorMessage);
-    } finally {
-      setIsSubmitting(false);
     }
   }
   if (!offer) return null;

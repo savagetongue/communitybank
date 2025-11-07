@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useState } from 'react';
+
 const offerFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters long.' }),
@@ -35,7 +35,6 @@ interface OfferFormProps {
   onSubmit: (data: OfferFormValues) => Promise<boolean>; // Returns true on success
 }
 export function OfferForm({ isOpen, onOpenChange, onSubmit }: OfferFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<OfferFormValues>({
     resolver: zodResolver(offerFormSchema),
     defaultValues: {
@@ -45,14 +44,13 @@ export function OfferForm({ isOpen, onOpenChange, onSubmit }: OfferFormProps) {
       ratePerHour: 1,
     },
   });
+  const { isSubmitting } = form.formState;
   async function handleFormSubmit(data: OfferFormValues) {
-    setIsSubmitting(true);
     const success = await onSubmit(data);
     if (success) {
       onOpenChange(false);
       form.reset();
     }
-    setIsSubmitting(false);
   }
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

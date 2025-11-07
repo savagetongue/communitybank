@@ -1,9 +1,10 @@
-import mysql, { type Pool } from 'mysql2/promise';
+import { createPool, type Pool, type Connection } from 'mysql2/promise';
 import type { Env } from './core-utils';
 let pool: Pool | null = null;
-export function getDb(env: Env): Pool {
+
+function getPool(env: Env): Pool {
   if (!pool) {
-    pool = mysql.createPool({
+    pool = createPool({
       host: env.DB_HOST,
       user: env.DB_USER,
       password: env.DB_PASSWORD,
@@ -14,4 +15,9 @@ export function getDb(env: Env): Pool {
     });
   }
   return pool;
+}
+
+export async function getDbConnection(env: Env): Promise<Connection> {
+  const pool = getPool(env);
+  return pool.getConnection();
 }
