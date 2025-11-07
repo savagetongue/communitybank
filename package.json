@@ -1,5 +1,5 @@
 {
-  "name": "chronobank-07tlvazdz_kxqs78oav9k",
+  "name": "vite-cf-do-v2-runner",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,14 +9,14 @@
     "lint": "eslint --cache -f json --quiet .",
     "preview": "bun run build && vite preview --host 0.0.0.0 --port ${PORT:-4173}",
     "deploy": "bun run build && wrangler deploy",
-    "cf-typegen": "wrangler types",
-    "prepare": "bun .bootstrap.js || true"
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@headlessui/react": "^2.2.4",
     "@hookform/resolvers": "^5.1.1",
+    "@planetscale/database": "^1.19.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -60,7 +60,6 @@
     "immer": "^10.1.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.525.0",
-    "mysql2": "^3.10.3",
     "next-themes": "^0.4.6",
     "pino": "^9.11.0",
     "react": "^18.3.1",
