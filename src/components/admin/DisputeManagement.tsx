@@ -8,7 +8,12 @@ import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { api } from '@/lib/api-client';
 import { toast } from 'sonner';
-export function DisputeManagement() {
+import { MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+interface DisputeManagementProps {
+  onViewDetails: (dispute: Dispute) => void;
+}
+export function DisputeManagement({ onViewDetails }: DisputeManagementProps) {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const fetchDisputes = useCallback(() => {
@@ -39,9 +44,10 @@ export function DisputeManagement() {
     [...Array(3)].map((_, i) => (
       <TableRow key={i}>
         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
         <TableCell><Skeleton className="h-5 w-48" /></TableCell>
         <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-        <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
       </TableRow>
     ))
   );
@@ -56,7 +62,8 @@ export function DisputeManagement() {
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
-              <TableHead>Reason</TableHead>
+              <TableHead>Booking</TableHead>
+              <TableHead>Parties</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -68,27 +75,37 @@ export function DisputeManagement() {
               disputes.map(dispute => (
                 <TableRow key={dispute.id}>
                   <TableCell>{format(new Date(dispute.createdAt), 'MMM d, yyyy')}</TableCell>
-                  <TableCell className="max-w-xs truncate">{dispute.reason}</TableCell>
+                  <TableCell className="font-medium">{dispute.bookingTitle}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{dispute.memberName} vs {dispute.providerName}</TableCell>
                   <TableCell>
                     <Badge variant={dispute.status === 'OPEN' ? 'destructive' : 'secondary'}>
                       {dispute.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {dispute.status === 'OPEN' ? (
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={() => handleResolve(dispute.id, 'RESOLVED')}>Resolve</Button>
-                        <Button size="sm" variant="outline" onClick={() => handleResolve(dispute.id, 'REJECTED')}>Reject</Button>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Resolved</span>
-                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onViewDetails(dispute)}>View Details</DropdownMenuItem>
+                        {dispute.status === 'OPEN' && (
+                          <>
+                            <DropdownMenuItem onClick={() => handleResolve(dispute.id, 'RESOLVED')}>Resolve</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleResolve(dispute.id, 'REJECTED')}>Reject</DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center h-24">
+                <TableCell colSpan={5} className="text-center h-24">
                   No disputes found.
                 </TableCell>
               </TableRow>

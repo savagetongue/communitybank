@@ -96,4 +96,8 @@ export interface Dispute {
     evidenceType: string;
     uri: string;
   }[];
+  // Denormalized data for admin panel
+  bookingTitle?: string;
+  memberName?: string;
+  providerName?: string;
 }
