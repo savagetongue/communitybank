@@ -1,7 +1,7 @@
-import mysql from 'mysql2/promise';
+import mysql, { type Pool } from 'mysql2/promise';
 import type { Env } from './core-utils';
-let pool: mysql.Pool | null = null;
-export function getDb(env: Env) {
+let pool: Pool | null = null;
+export function getDb(env: Env): Pool {
   if (!pool) {
     pool = mysql.createPool({
       host: env.DB_HOST,

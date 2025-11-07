@@ -14,3 +14,5 @@ export const notFound = (c: Context, error = 'not found') => c.json({ success: f
 export const unauthorized = (c: Context, error = 'unauthorized') => c.json({ success: false, error } as ApiResponse, 401);
 export const forbidden = (c: Context, error = 'forbidden') => c.json({ success: false, error } as ApiResponse, 403);
 export const isStr = (s: unknown): s is string => typeof s === 'string' && s.length > 0;
+
+export class GlobalDurableObject {}
