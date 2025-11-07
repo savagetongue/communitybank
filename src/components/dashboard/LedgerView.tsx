@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { getLedgerByUserId } from '@/lib/mockApi';
 import type { LedgerEntry } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -6,32 +7,27 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Clock } from 'lucide-react';
-import { api } from '@/lib/api-client';
-interface LedgerData {
-  entries: LedgerEntry[];
-  balance: number;
-}
 export function LedgerView() {
-  const [ledger, setLedger] = useState<LedgerData>({ entries: [], balance: 0 });
+  const [ledger, setLedger] = useState<{ entries: LedgerEntry[], balance: number }>({ entries: [], balance: 0 });
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    setIsLoading(true);
-    api<LedgerData>('/api/me/ledger')
-      .then(setLedger)
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
+    getLedgerByUserId('user-demo')
+      .then(data => {
+        setLedger(data);
+        setIsLoading(false);
+      })
+      .catch(console.error);
   }, []);
   const renderSkeleton = () => (
-    <>
-      {[...Array(3)].map((_, i) => (
-        <TableRow key={i}>
-          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-          <TableCell className="text-right hidden sm:table-cell"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-        </TableRow>
-      ))}
-    </>
+    <TableRow>
+      <TableCell colSpan={4}>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      </TableCell>
+    </TableRow>
   );
   return (
     <Card>
@@ -45,7 +41,7 @@ export function LedgerView() {
             <p className="text-sm text-muted-foreground">Current Balance</p>
             <p className="text-2xl font-bold flex items-center justify-end gap-1">
               <Clock className="h-5 w-5 text-brand" />
-              {isLoading ? <Skeleton className="h-8 w-24" /> : <span>{ledger.balance.toFixed(2)}</span>}
+              {isLoading ? <Skeleton className="h-6 w-16" /> : <span>{ledger.balance.toFixed(2)}</span>}
             </p>
           </div>
         </div>
@@ -82,7 +78,7 @@ export function LedgerView() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center h-24">
+                <TableCell colSpan={4} className="text-center">
                   No transactions found.
                 </TableCell>
               </TableRow>

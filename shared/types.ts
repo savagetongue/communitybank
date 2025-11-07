@@ -43,6 +43,9 @@ export interface Booking {
   status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
   escrowId: string;
   createdAt: string;
+  offerTitle?: string;
+  otherPartyName?: string;
+  otherPartyAvatarUrl?: string;
 }
 export interface Escrow {
   id: string;
@@ -63,7 +66,7 @@ export interface LedgerEntry {
   createdAt: string;
 }
 export interface Rating {
-  id: string;
+  id:string;
   bookingId: string;
   raterId: string;
   ratedId: string;
