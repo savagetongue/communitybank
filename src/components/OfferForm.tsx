@@ -21,8 +21,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { addOffer } from '@/lib/mockApi';
-import { toast } from 'sonner';
 import { useState } from 'react';
 const offerFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long.' }),
@@ -30,13 +28,13 @@ const offerFormSchema = z.object({
   skills: z.string().min(1, { message: 'Please list at least one skill.' }),
   ratePerHour: z.coerce.number().positive({ message: 'Rate must be a positive number.' }),
 });
-type OfferFormValues = z.infer<typeof offerFormSchema>;
+export type OfferFormValues = z.infer<typeof offerFormSchema>;
 interface OfferFormProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onOfferCreated?: () => void; // Optional callback to refresh list
+  onSubmit: (data: OfferFormValues) => Promise<boolean>; // Returns true on success
 }
-export function OfferForm({ isOpen, onOpenChange, onOfferCreated }: OfferFormProps) {
+export function OfferForm({ isOpen, onOpenChange, onSubmit }: OfferFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<OfferFormValues>({
     resolver: zodResolver(offerFormSchema),
@@ -47,23 +45,14 @@ export function OfferForm({ isOpen, onOpenChange, onOfferCreated }: OfferFormPro
       ratePerHour: 1,
     },
   });
-  async function onSubmit(data: OfferFormValues) {
+  async function handleFormSubmit(data: OfferFormValues) {
     setIsSubmitting(true);
-    const offerData = {
-      ...data,
-      skills: data.skills.split(',').map(s => s.trim()),
-    };
-    try {
-      await addOffer(offerData);
-      toast.success('Offer created successfully!');
-      onOfferCreated?.();
+    const success = await onSubmit(data);
+    if (success) {
       onOpenChange(false);
       form.reset();
-    } catch (error) {
-      toast.error('Failed to create offer. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -75,7 +64,7 @@ export function OfferForm({ isOpen, onOpenChange, onOfferCreated }: OfferFormPro
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="title"

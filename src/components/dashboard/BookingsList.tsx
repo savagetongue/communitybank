@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { getBookingsByUserId } from '@/lib/mockApi';
 import type { Booking } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,28 +9,34 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { api } from '@/lib/api-client';
 export function BookingsList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    // In a real app, you'd get the user ID from the auth store
-    getBookingsByUserId('user-demo')
+    setIsLoading(true);
+    api<Booking[]>('/api/me/bookings')
       .then(data => {
+        // Note: The backend currently doesn't denormalize this data.
+        // In a real app, we'd either do that on the backend or make extra requests here.
+        // For now, we'll display what we have.
         setBookings(data);
-        setIsLoading(false);
       })
-      .catch(console.error);
+      .catch(console.error)
+      .finally(() => setIsLoading(false));
   }, []);
   const renderSkeleton = () => (
-    <TableRow>
-      <TableCell colSpan={5}>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-      </TableCell>
-    </TableRow>
+    <>
+      {[...Array(3)].map((_, i) => (
+        <TableRow key={i}>
+          <TableCell className="font-medium"><Skeleton className="h-5 w-48" /></TableCell>
+          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+          <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
+          <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+          <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+        </TableRow>
+      ))}
+    </>
   );
   return (
     <Card>
@@ -60,11 +65,11 @@ export function BookingsList() {
                     <div className="flex items-center gap-3">
                       <Avatar className="hidden h-9 w-9 sm:flex">
                         <AvatarImage src={booking.otherPartyAvatarUrl} alt="Avatar" />
-                        <AvatarFallback>{booking.otherPartyName?.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{booking.otherPartyName?.charAt(0) || '?'}</AvatarFallback>
                       </Avatar>
                       <div className="grid gap-0.5">
-                        <p className="font-medium">{booking.offerTitle}</p>
-                        <p className="text-sm text-muted-foreground">with {booking.otherPartyName}</p>
+                        <p className="font-medium">{booking.offerTitle || `Booking ${booking.id.slice(0, 6)}`}</p>
+                        <p className="text-sm text-muted-foreground">with {booking.otherPartyName || 'Another Member'}</p>
                       </div>
                     </div>
                   </TableCell>
@@ -91,7 +96,7 @@ export function BookingsList() {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} className="text-center">
+                <TableCell colSpan={5} className="text-center h-24">
                   You have no bookings yet.
                 </TableCell>
               </TableRow>

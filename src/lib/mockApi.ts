@@ -212,19 +212,6 @@ export const getLedgerByUserId = (userId: string): Promise<{ entries: LedgerEntr
     return simulateDelay({ entries, balance });
 };
 // --- "Write" Operations ---
-type AddOfferData = Omit<Offer, 'id' | 'providerId' | 'isActive' | 'createdAt'>;
-export const addOffer = (data: AddOfferData): Promise<{ status: 'ok' }> => {
-  console.log('Simulating addOffer with data:', data);
-  const newOffer: Offer = {
-    ...data,
-    id: `offer-${Date.now()}`,
-    providerId: 'provider-1', // Hardcoded for demo
-    isActive: true,
-    createdAt: new Date().toISOString(),
-  };
-  mockOffers.unshift(newOffer); // Add to the start of the list
-  return simulateDelay({ status: 'ok' });
-};
 interface CreateRequestData {
   offerId: string;
   note?: string;

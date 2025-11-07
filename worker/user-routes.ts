@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
 import { ok, bad, notFound, unauthorized } from './core-utils';
-import { MemberEntity, OfferEntity } from './entities';
-import type { Member, Offer } from "@shared/types";
+import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity } from './entities';
+import type { Member, Offer, Booking, LedgerEntry } from "@shared/types";
 import { Context } from "hono";
 // --- Helper Functions ---
 // Simple (and insecure) password hashing. In a real app, use a library like bcrypt.
@@ -43,6 +43,7 @@ async function denormalizeOffers(env: Env, offers: Offer[]): Promise<Offer[]> {
 type AuthContext = {
     Variables: {
         currentUserId: string;
+        currentUser: Member;
     }
 }
 const authMiddleware = async (c: Context<AuthContext>, next: () => Promise<void>) => {
@@ -55,11 +56,13 @@ const authMiddleware = async (c: Context<AuthContext>, next: () => Promise<void>
     if (!userId) {
         return unauthorized(c, 'Invalid token');
     }
-    const member = new MemberEntity(c.env, userId);
-    if (!(await member.exists())) {
+    const memberInstance = new MemberEntity(c.env, userId);
+    if (!(await memberInstance.exists())) {
         return unauthorized(c, 'User not found');
     }
+    const member = await memberInstance.getState();
     c.set('currentUserId', userId);
+    c.set('currentUser', member);
     await next();
 };
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -150,12 +153,62 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     return ok(c, memberData);
   });
   // --- Authenticated Routes ---
-  const app_auth = app.use('/api/me/*', authMiddleware);
+  const app_auth = app.use('/api/me/*', authMiddleware).use('/api/offers', authMiddleware);
   app_auth.get('/api/me', async (c: Context<AuthContext>) => {
-    const userId = c.get('currentUserId');
-    const memberInstance = new MemberEntity(c.env, userId);
-    const member = await memberInstance.getState();
+    const member = c.get('currentUser');
     const { passwordHash: _, ...memberData } = member;
     return ok(c, memberData);
+  });
+  app_auth.put('/api/me', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    const { name, bio, contact } = await c.req.json();
+    const memberInstance = new MemberEntity(c.env, userId);
+    await memberInstance.patch({ name, bio, contact });
+    const updatedMember = await memberInstance.getState();
+    const { passwordHash: _, ...memberData } = updatedMember;
+    return ok(c, memberData);
+  });
+  app_auth.get('/api/me/bookings', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    // This is inefficient. A real app would use secondary indexes.
+    const { items: allBookings } = await BookingEntity.list(c.env);
+    const userBookings = allBookings.filter(b => b.memberId === userId || b.providerId === userId);
+    return ok(c, userBookings);
+  });
+  app_auth.get('/api/me/offers', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    // Inefficient, needs secondary index in a real app.
+    const { items: allOffers } = await OfferEntity.list(c.env);
+    const userOffers = allOffers.filter(o => o.providerId === userId);
+    return ok(c, userOffers);
+  });
+  app_auth.get('/api/me/ledger', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    // Inefficient, needs secondary index in a real app.
+    const { items: allEntries } = await LedgerEntryEntity.list(c.env);
+    const userEntries = allEntries.filter(l => l.memberId === userId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const balance = userEntries.length > 0 ? userEntries[0].balanceAfter : 0;
+    return ok(c, { entries: userEntries, balance });
+  });
+  app_auth.post('/api/offers', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    const body = await c.req.json();
+    // Basic validation
+    if (!body.title || !body.description || !body.skills || !body.ratePerHour) {
+        return bad(c, 'Missing required offer fields');
+    }
+    const newOffer: Offer = {
+        id: `offer-${crypto.randomUUID()}`,
+        providerId: userId,
+        title: body.title,
+        description: body.description,
+        skills: body.skills,
+        ratePerHour: body.ratePerHour,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+    };
+    await OfferEntity.create(c.env, newOffer);
+    return ok(c, newOffer);
   });
 }

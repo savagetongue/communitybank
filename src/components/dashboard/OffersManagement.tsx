@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { getOffersByProviderId } from '@/lib/mockApi';
+import { useEffect, useState, useCallback } from 'react';
 import type { Offer } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,34 +7,53 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '../ui/skeleton';
-import { OfferForm } from '../OfferForm';
+import { OfferForm, OfferFormValues } from '../OfferForm';
+import { api } from '@/lib/api-client';
+import { toast } from 'sonner';
 export function OffersManagement() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isOfferFormOpen, setIsOfferFormOpen] = useState(false);
-  const fetchOffers = () => {
+  const fetchOffers = useCallback(() => {
     setIsLoading(true);
-    // In a real app, you'd get the user ID from the auth store
-    // Assuming 'user-demo' is a provider for this mock
-    getOffersByProviderId('provider-1') // Using a fixed ID for demo
-      .then(data => {
-        setOffers(data);
-      })
+    api<Offer[]>('/api/me/offers')
+      .then(setOffers)
       .catch(console.error)
       .finally(() => setIsLoading(false));
-  };
+  }, []);
   useEffect(() => {
     fetchOffers();
-  }, []);
+  }, [fetchOffers]);
+  const handleCreateOffer = async (data: OfferFormValues) => {
+    const offerData = {
+      ...data,
+      skills: data.skills.split(',').map(s => s.trim()),
+    };
+    try {
+      await api('/api/offers', {
+        method: 'POST',
+        body: JSON.stringify(offerData),
+      });
+      toast.success('Offer created successfully!');
+      fetchOffers(); // Refresh the list
+      return true; // Indicate success
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create offer.';
+      toast.error(errorMessage);
+      return false; // Indicate failure
+    }
+  };
   const renderSkeleton = () => (
-    <TableRow>
-      <TableCell colSpan={4}>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-full" />
-        </div>
-      </TableCell>
-    </TableRow>
+    <>
+      {[...Array(2)].map((_, i) => (
+        <TableRow key={i}>
+          <TableCell className="font-medium"><Skeleton className="h-5 w-48" /></TableCell>
+          <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+          <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
+          <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+        </TableRow>
+      ))}
+    </>
   );
   return (
     <>
@@ -94,7 +112,7 @@ export function OffersManagement() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
+                  <TableCell colSpan={4} className="text-center h-24">
                     You haven't created any offers yet.
                   </TableCell>
                 </TableRow>
@@ -103,10 +121,10 @@ export function OffersManagement() {
           </Table>
         </CardContent>
       </Card>
-      <OfferForm 
-        isOpen={isOfferFormOpen} 
+      <OfferForm
+        isOpen={isOfferFormOpen}
         onOpenChange={setIsOfferFormOpen}
-        onOfferCreated={fetchOffers}
+        onSubmit={handleCreateOffer}
       />
     </>
   );
