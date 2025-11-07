@@ -29,10 +29,8 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api-client';
 const bookingFormSchema = z.object({
-  startTime: z.date({
-    required_error: "A start date is required.",
-  }),
-  durationMinutes: z.coerce.number().int().min(15, { message: 'Duration must be at least 15 minutes.' }),
+  startTime: z.date(),
+  durationMinutes: z.number().int().min(15, { message: 'Duration must be at least 15 minutes.' }),
 });
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 interface BookingFlowProps {
@@ -138,7 +136,13 @@ export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingF
                 <FormItem>
                   <FormLabel>Duration (in minutes)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="15" min="15" {...field} />
+                    <Input
+                      type="number"
+                      step="15"
+                      min="15"
+                      {...field}
+                      onChange={event => field.onChange(parseInt(event.target.value, 10))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

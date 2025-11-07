@@ -70,7 +70,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app.use('/api/*', async (c, next) => {
     await Promise.all([
         MemberEntity.ensureSeed(c.env),
-        OfferEntity.ensureSeed(c.env)
+        OfferEntity.ensureSeed(c.env),
+        LedgerEntryEntity.ensureSeed(c.env),
     ]);
     await next();
   });
@@ -156,7 +157,8 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   const app_auth = app.use('/api/me/*', authMiddleware)
                       .use('/api/offers', authMiddleware)
                       .use('/api/requests', authMiddleware)
-                      .use('/api/bookings', authMiddleware);
+                      .use('/api/bookings', authMiddleware)
+                      .use('/api/bookings/*', authMiddleware);
   app_auth.get('/api/me', async (c: Context<AuthContext>) => {
     const member = c.get('currentUser');
     const { passwordHash: _, ...memberData } = member;
@@ -173,21 +175,18 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   });
   app_auth.get('/api/me/bookings', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    // This is inefficient. A real app would use secondary indexes.
     const { items: allBookings } = await BookingEntity.list(c.env);
     const userBookings = allBookings.filter(b => b.memberId === userId || b.providerId === userId);
     return ok(c, userBookings);
   });
   app_auth.get('/api/me/offers', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    // Inefficient, needs secondary index in a real app.
     const { items: allOffers } = await OfferEntity.list(c.env);
     const userOffers = allOffers.filter(o => o.providerId === userId);
     return ok(c, userOffers);
   });
   app_auth.get('/api/me/ledger', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
-    // Inefficient, needs secondary index in a real app.
     const { items: allEntries } = await LedgerEntryEntity.list(c.env);
     const userEntries = allEntries.filter(l => l.memberId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -197,7 +196,6 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
   app_auth.post('/api/offers', async (c: Context<AuthContext>) => {
     const userId = c.get('currentUserId');
     const body = await c.req.json();
-    // Basic validation
     if (!body.title || !body.description || !body.skills || !body.ratePerHour) {
         return bad(c, 'Missing required offer fields');
     }
@@ -247,11 +245,67 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         memberId: userId,
         startTime,
         durationMinutes,
-        status: 'CONFIRMED', // Simplified for now
+        status: 'CONFIRMED',
         escrowId: `escrow-${crypto.randomUUID()}`,
         createdAt: new Date().toISOString(),
     };
     await BookingEntity.create(c.env, newBooking);
     return ok(c, newBooking);
+  });
+  app_auth.post('/api/bookings/:id/complete', async (c: Context<AuthContext>) => {
+    const { id: bookingId } = c.req.param();
+    const currentUserId = c.get('currentUserId');
+    const bookingInstance = new BookingEntity(c.env, bookingId);
+    if (!await bookingInstance.exists()) {
+        return notFound(c, 'Booking not found');
+    }
+    const booking = await bookingInstance.getState();
+    if (booking.providerId !== currentUserId) {
+        return unauthorized(c, 'Only the provider can complete a booking.');
+    }
+    if (booking.status !== 'CONFIRMED') {
+        return bad(c, `Booking cannot be completed. Current status: ${booking.status}`);
+    }
+    // This is inefficient. In a real app, the offerId would be on the booking.
+    const serviceRequestInstance = new ServiceRequestEntity(c.env, booking.requestId);
+    const serviceRequest = await serviceRequestInstance.getState();
+    const offerInstance = new OfferEntity(c.env, serviceRequest.offerId);
+    const offer = await offerInstance.getState();
+    const amount = (offer.ratePerHour * booking.durationMinutes) / 60;
+    // --- ATOMIC LEDGER UPDATE (Simulated) ---
+    // In a real DB, this would be a transaction. Here we do it sequentially.
+    // 1. Debit the member
+    const { items: memberLedger } = await LedgerEntryEntity.list(c.env);
+    const memberLastEntry = memberLedger.filter(e => e.memberId === booking.memberId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    const memberBalanceBefore = memberLastEntry ? memberLastEntry.balanceAfter : 0;
+    const debitEntry: LedgerEntry = {
+        id: `ledger-${crypto.randomUUID()}`,
+        memberId: booking.memberId,
+        amount: -amount,
+        txnType: 'DEBIT',
+        balanceAfter: memberBalanceBefore - amount,
+        relatedBookingId: bookingId,
+        notes: `Payment for "${offer.title}"`,
+        createdAt: new Date().toISOString(),
+    };
+    await LedgerEntryEntity.create(c.env, debitEntry);
+    // 2. Credit the provider
+    const { items: providerLedger } = await LedgerEntryEntity.list(c.env);
+    const providerLastEntry = providerLedger.filter(e => e.memberId === booking.providerId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    const providerBalanceBefore = providerLastEntry ? providerLastEntry.balanceAfter : 0;
+    const creditEntry: LedgerEntry = {
+        id: `ledger-${crypto.randomUUID()}`,
+        memberId: booking.providerId,
+        amount: amount,
+        txnType: 'CREDIT',
+        balanceAfter: providerBalanceBefore + amount,
+        relatedBookingId: bookingId,
+        notes: `Received for "${offer.title}"`,
+        createdAt: new Date().toISOString(),
+    };
+    await LedgerEntryEntity.create(c.env, creditEntry);
+    // 3. Update booking status
+    await bookingInstance.patch({ status: 'COMPLETED' });
+    return ok(c, { status: 'ok', bookingId, ledgerEntries: [debitEntry.id, creditEntry.id] });
   });
 }

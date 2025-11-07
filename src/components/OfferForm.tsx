@@ -26,7 +26,7 @@ const offerFormSchema = z.object({
   title: z.string().min(5, { message: 'Title must be at least 5 characters long.' }),
   description: z.string().min(20, { message: 'Description must be at least 20 characters long.' }),
   skills: z.string().min(1, { message: 'Please list at least one skill.' }),
-  ratePerHour: z.coerce.number().positive({ message: 'Rate must be a positive number.' }),
+  ratePerHour: z.number().positive({ message: 'Rate must be a positive number.' }),
 });
 export type OfferFormValues = z.infer<typeof offerFormSchema>;
 interface OfferFormProps {
@@ -118,7 +118,13 @@ export function OfferForm({ isOpen, onOpenChange, onSubmit }: OfferFormProps) {
                 <FormItem>
                   <FormLabel>Rate (credits per hour)</FormLabel>
                   <FormControl>
-                    <Input type="number" step="0.25" min="0" {...field} />
+                    <Input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      {...field}
+                      onChange={event => field.onChange(parseFloat(event.target.value))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

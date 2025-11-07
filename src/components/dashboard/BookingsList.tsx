@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Booking } from '@shared/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,23 +8,38 @@ import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../ui/dropdown-menu';
 import { api } from '@/lib/api-client';
+import { useAuthStore } from '@/stores/authStore';
+import { toast } from 'sonner';
 export function BookingsList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  useEffect(() => {
+  const user = useAuthStore(s => s.user);
+  const fetchBookings = useCallback(() => {
     setIsLoading(true);
     api<Booking[]>('/api/me/bookings')
       .then(data => {
-        // Note: The backend currently doesn't denormalize this data.
-        // In a real app, we'd either do that on the backend or make extra requests here.
-        // For now, we'll display what we have.
         setBookings(data);
       })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
+  useEffect(() => {
+    fetchBookings();
+  }, [fetchBookings]);
+  const handleCompleteBooking = async (bookingId: string) => {
+    try {
+      await api(`/api/bookings/${bookingId}/complete`, {
+        method: 'POST',
+      });
+      toast.success('Service completed successfully!');
+      fetchBookings(); // Refresh the list
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to complete service.';
+      toast.error(errorMessage);
+    }
+  };
   const renderSkeleton = () => (
     <>
       {[...Array(3)].map((_, i) => (
@@ -89,6 +104,14 @@ export function BookingsList() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>View Details</DropdownMenuItem>
                         <DropdownMenuItem>Contact Member</DropdownMenuItem>
+                        {user?.id === booking.providerId && booking.status === 'CONFIRMED' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleCompleteBooking(booking.id)}>
+                              Complete Service
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

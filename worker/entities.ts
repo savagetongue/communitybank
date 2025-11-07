@@ -57,6 +57,17 @@ export class MemberEntity extends IndexedEntity<Member> {
       createdAt: new Date().toISOString(),
       passwordHash: 'hashed_password_placeholder',
     },
+    {
+        id: 'user-demo',
+        name: 'Demo User',
+        email: 'demo@example.com',
+        avatarUrl: 'https://i.pravatar.cc/150?u=demo',
+        bio: 'I am here to test the platform!',
+        rating: 5.0,
+        isProvider: false,
+        createdAt: new Date().toISOString(),
+        passwordHash: 'hashed_password_placeholder',
+    }
   ];
 }
 export class OfferEntity extends IndexedEntity<Offer> {
@@ -161,6 +172,17 @@ export class LedgerEntryEntity extends IndexedEntity<LedgerEntry> {
         balanceAfter: 0,
         createdAt: "",
     };
+    static readonly seedData: ReadonlyArray<LedgerEntry> = [
+        {
+            id: 'ledger-seed-1',
+            memberId: 'user-demo',
+            amount: 10,
+            txnType: 'CREDIT',
+            balanceAfter: 10,
+            notes: 'Initial account credit for demo purposes.',
+            createdAt: new Date().toISOString(),
+        }
+    ];
 }
 export class ServiceRequestEntity extends IndexedEntity<ServiceRequest> {
     static readonly entityName = "serviceRequest";
