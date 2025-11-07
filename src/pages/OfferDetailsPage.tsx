@@ -12,11 +12,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Link } from 'react-router-dom';
 import { RequestForm } from '@/components/RequestForm';
 import { useAuthStore } from '@/stores/authStore';
+import { BookingFlow } from '@/components/BookingFlow';
 export function OfferDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [offer, setOffer] = useState<Offer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRequestFormOpen, setIsRequestFormOpen] = useState(false);
+  const [isBookingFlowOpen, setIsBookingFlowOpen] = useState(false);
   const user = useAuthStore(s => s.user);
   useEffect(() => {
     if (id) {
@@ -30,6 +32,10 @@ export function OfferDetailsPage() {
         .catch(console.error);
     }
   }, [id]);
+  const handleRequestSuccess = () => {
+    setIsRequestFormOpen(false);
+    setIsBookingFlowOpen(true);
+  };
   if (isLoading) {
     return (
       <MainLayout>
@@ -138,10 +144,16 @@ export function OfferDetailsPage() {
           </div>
         </div>
       </MainLayout>
-      <RequestForm 
-        isOpen={isRequestFormOpen} 
-        onOpenChange={setIsRequestFormOpen} 
-        offer={offer} 
+      <RequestForm
+        isOpen={isRequestFormOpen}
+        onOpenChange={setIsRequestFormOpen}
+        offer={offer}
+        onSuccess={handleRequestSuccess}
+      />
+      <BookingFlow
+        isOpen={isBookingFlowOpen}
+        onOpenChange={setIsBookingFlowOpen}
+        offer={offer}
       />
     </>
   );

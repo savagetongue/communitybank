@@ -20,6 +20,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { createBooking } from '@/lib/mockApi';
 import { toast } from 'sonner';
 import type { Offer } from '@shared/types';
 import { Clock, Calendar as CalendarIcon, ArrowRight } from 'lucide-react';
@@ -27,52 +28,47 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { api } from '@/lib/api-client';
 const bookingFormSchema = z.object({
-  startTime: z.date(),
-  durationMinutes: z.number().int().min(15, { message: 'Duration must be at least 15 minutes.' }),
+  startTime: z.date({
+    required_error: "A start date is required.",
+  }),
+  durationMinutes: z.coerce.number().int().min(15, { message: 'Duration must be at least 15 minutes.' }),
 });
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 interface BookingFlowProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   offer: Offer | null;
-  requestId: string | null;
 }
-export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingFlowProps) {
+export function BookingFlow({ isOpen, onOpenChange, offer }: BookingFlowProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
       durationMinutes: 60,
     },
   });
-  const { isSubmitting } = form.formState;
   const duration = form.watch('durationMinutes');
   const escrowAmount = useMemo(() => {
     if (!offer || !duration) return 0;
     return (offer.ratePerHour * duration) / 60;
   }, [offer, duration]);
   async function onSubmit(data: BookingFormValues) {
-    if (!offer || !requestId) {
-      toast.error('Missing offer or request information.');
-      return;
-    }
+    if (!offer) return;
+    setIsSubmitting(true);
     try {
-      await api('/api/bookings', {
-        method: 'POST',
-        body: JSON.stringify({
-          offerId: offer.id,
-          requestId: requestId,
-          startTime: data.startTime.toISOString(),
-          durationMinutes: data.durationMinutes,
-        }),
+      await createBooking({
+        offerId: offer.id,
+        startTime: data.startTime.toISOString(),
+        durationMinutes: data.durationMinutes,
       });
       toast.success('Booking confirmed successfully!');
       onOpenChange(false);
       form.reset();
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to confirm booking.';
-      toast.error(errorMessage);
+      toast.error('Failed to confirm booking. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   }
   if (!offer) return null;
@@ -133,13 +129,7 @@ export function BookingFlow({ isOpen, onOpenChange, offer, requestId }: BookingF
                 <FormItem>
                   <FormLabel>Duration (in minutes)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="15"
-                      min="15"
-                      {...field}
-                      onChange={event => field.onChange(parseInt(event.target.value, 10))}
-                    />
+                    <Input type="number" step="15" min="15" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
