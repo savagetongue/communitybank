@@ -4,7 +4,7 @@ A minimalist, community-driven platform for exchanging services and skills using
 
 ChronoBank is a modern, minimalist time-banking platform where users can exchange services for time credits instead of traditional currency. It operates on a peer-to-peer model, allowing members to both offer their skills and request services from others. The core currency is one hour of time, creating a fair and equitable system of exchange. The platform includes robust features for account management, service listings (Offers), booking, a secure escrow system for time credits, a detailed transaction ledger, user ratings, and an admin-moderated dispute resolution process.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/savagetongue/communitybank)
 
 ## ✨ Key Features
 
@@ -92,7 +92,7 @@ This command will:
 
 Alternatively, you can deploy directly from your GitHub repository using the button below.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/savagetongue/communitybank)
 
 ## 📂 Project Structure
 
