@@ -1,87 +1,29 @@
-import { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuthStore } from '@/stores/authStore';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookingsList } from '@/components/dashboard/BookingsList';
-import { OffersManagement } from '@/components/dashboard/OffersManagement';
-import { LedgerView } from '@/components/dashboard/LedgerView';
-import { ProfileSettings } from '@/components/dashboard/ProfileSettings';
-import { RatingForm } from '@/components/RatingForm';
-import { DisputeForm } from '@/components/DisputeForm';
-import type { Booking } from '@shared/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 export function DashboardPage() {
   const user = useAuthStore(s => s.user);
-  const [isRatingFormOpen, setIsRatingFormOpen] = useState(false);
-  const [selectedBookingForRating, setSelectedBookingForRating] = useState<Booking | null>(null);
-  const [isDisputeFormOpen, setIsDisputeFormOpen] = useState(false);
-  const [selectedBookingForDispute, setSelectedBookingForDispute] = useState<Booking | null>(null);
-  const handleOpenRatingForm = (booking: Booking) => {
-    setSelectedBookingForRating(booking);
-    setIsRatingFormOpen(true);
-  };
-  const handleRatingSuccess = () => {
-    setIsRatingFormOpen(false);
-    setSelectedBookingForRating(null);
-    // TODO: Refresh bookings list to reflect `rated` status change
-  };
-  const handleOpenDisputeForm = (booking: Booking) => {
-    setSelectedBookingForDispute(booking);
-    setIsDisputeFormOpen(true);
-  };
-  const handleDisputeSuccess = () => {
-    setIsDisputeFormOpen(false);
-    setSelectedBookingForDispute(null);
-    // TODO: Refresh bookings list to reflect `DISPUTED` status
-  };
   return (
-    <>
-      <MainLayout>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-12 md:py-16">
-            <div className="space-y-2 mb-10">
-              <h1 className="text-4xl md:text-5xl font-display font-bold">Dashboard</h1>
-              <p className="text-xl text-muted-foreground">
-                Welcome back, {user?.name || 'Member'}!
-              </p>
-            </div>
-            <Tabs defaultValue="bookings" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
-                <TabsTrigger value="bookings">My Bookings</TabsTrigger>
-                <TabsTrigger value="offers">My Offers</TabsTrigger>
-                <TabsTrigger value="ledger">Ledger</TabsTrigger>
-                <TabsTrigger value="profile">Profile</TabsTrigger>
-              </TabsList>
-              <TabsContent value="bookings" className="mt-6">
-                <BookingsList
-                  onRateBooking={handleOpenRatingForm}
-                  onDisputeBooking={handleOpenDisputeForm}
-                />
-              </TabsContent>
-              <TabsContent value="offers" className="mt-6">
-                <OffersManagement />
-              </TabsContent>
-              <TabsContent value="ledger" className="mt-6">
-                <LedgerView />
-              </TabsContent>
-              <TabsContent value="profile" className="mt-6">
-                <ProfileSettings />
-              </TabsContent>
-            </Tabs>
+    <MainLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="py-12 md:py-16">
+          <div className="space-y-4 mb-12">
+            <h1 className="text-4xl md:text-5xl font-display font-bold">Dashboard</h1>
+            <p className="text-xl text-muted-foreground">
+              Welcome back, {user?.name || 'Member'}!
+            </p>
           </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Your ChronoBank</CardTitle>
+              <CardDescription>This is your personal space. More features coming soon!</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>Here you will be able to see your bookings, manage your offers, and view your time ledger.</p>
+            </CardContent>
+          </Card>
         </div>
-      </MainLayout>
-      <RatingForm
-        isOpen={isRatingFormOpen}
-        onOpenChange={setIsRatingFormOpen}
-        booking={selectedBookingForRating}
-        onSuccess={handleRatingSuccess}
-      />
-      <DisputeForm
-        isOpen={isDisputeFormOpen}
-        onOpenChange={setIsDisputeFormOpen}
-        booking={selectedBookingForDispute}
-        onSuccess={handleDisputeSuccess}
-      />
-    </>
+      </div>
+    </MainLayout>
   );
 }

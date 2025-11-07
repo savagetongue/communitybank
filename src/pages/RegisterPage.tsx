@@ -7,8 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
-import { api } from '@/lib/api-client';
-import type { AuthResponse } from '@shared/types';
 export function RegisterPage() {
   const navigate = useNavigate();
   const login = useAuthStore(s => s.login);
@@ -16,22 +14,22 @@ export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    try {
-      const authResponse = await api<AuthResponse>('/api/register', {
-        method: 'POST',
-        body: JSON.stringify({ name, email, password }),
-      });
-      login(authResponse);
-      toast.success('Account created successfully!');
-      navigate('/dashboard');
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Registration failed. Please try again.';
-      toast.error(errorMessage);
-      setIsLoading(false);
-    }
+    // Simulate API call
+    setTimeout(() => {
+      try {
+        // In a real app, you'd call a register endpoint.
+        // Here, we'll just log the user in.
+        login({ email, name });
+        toast.success('Account created successfully!');
+        navigate('/dashboard');
+      } catch (error) {
+        toast.error('Registration failed. Please try again.');
+        setIsLoading(false);
+      }
+    }, 1000);
   };
   return (
     <MainLayout>
