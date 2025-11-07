@@ -1,5 +1,5 @@
 import { IndexedEntity } from "./core-utils";
-import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating } from "@shared/types";
+import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating, Dispute } from "@shared/types";
 export class MemberEntity extends IndexedEntity<Member> {
   static readonly entityName = "member";
   static readonly indexName = "members";
@@ -11,6 +11,7 @@ export class MemberEntity extends IndexedEntity<Member> {
     isProvider: false,
     createdAt: "",
     passwordHash: "",
+    isAdmin: false,
   };
   static readonly seedData: ReadonlyArray<Member> = [
     {
@@ -67,6 +68,18 @@ export class MemberEntity extends IndexedEntity<Member> {
         isProvider: false,
         createdAt: new Date().toISOString(),
         passwordHash: 'hashed_password_placeholder',
+    },
+    {
+        id: 'admin-user',
+        name: 'Admin User',
+        email: 'admin@chronobank.com',
+        avatarUrl: 'https://i.pravatar.cc/150?u=admin',
+        bio: 'Platform Administrator.',
+        rating: 5.0,
+        isProvider: false,
+        isAdmin: true,
+        createdAt: new Date().toISOString(),
+        passwordHash: 'hashed_password_placeholder', // In a real app, use a strong hash for a pre-set password
     }
   ];
 }
@@ -159,6 +172,7 @@ export class BookingEntity extends IndexedEntity<Booking> {
         status: 'PENDING',
         escrowId: "",
         createdAt: "",
+        rated: false,
     };
 }
 export class LedgerEntryEntity extends IndexedEntity<LedgerEntry> {
@@ -204,6 +218,17 @@ export class RatingEntity extends IndexedEntity<Rating> {
         raterId: "",
         ratedId: "",
         score: 3,
+        createdAt: "",
+    };
+}
+export class DisputeEntity extends IndexedEntity<Dispute> {
+    static readonly entityName = "dispute";
+    static readonly indexName = "disputes";
+    static readonly initialState: Dispute = {
+        id: "",
+        bookingId: "",
+        reason: "",
+        status: 'OPEN',
         createdAt: "",
     };
 }

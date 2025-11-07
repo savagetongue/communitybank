@@ -7,11 +7,14 @@ import { OffersManagement } from '@/components/dashboard/OffersManagement';
 import { LedgerView } from '@/components/dashboard/LedgerView';
 import { ProfileSettings } from '@/components/dashboard/ProfileSettings';
 import { RatingForm } from '@/components/RatingForm';
+import { DisputeForm } from '@/components/DisputeForm';
 import type { Booking } from '@shared/types';
 export function DashboardPage() {
   const user = useAuthStore(s => s.user);
   const [isRatingFormOpen, setIsRatingFormOpen] = useState(false);
   const [selectedBookingForRating, setSelectedBookingForRating] = useState<Booking | null>(null);
+  const [isDisputeFormOpen, setIsDisputeFormOpen] = useState(false);
+  const [selectedBookingForDispute, setSelectedBookingForDispute] = useState<Booking | null>(null);
   const handleOpenRatingForm = (booking: Booking) => {
     setSelectedBookingForRating(booking);
     setIsRatingFormOpen(true);
@@ -19,7 +22,16 @@ export function DashboardPage() {
   const handleRatingSuccess = () => {
     setIsRatingFormOpen(false);
     setSelectedBookingForRating(null);
-    // Potentially refresh bookings list here if we add a "rated" status
+    // TODO: Refresh bookings list to reflect `rated` status change
+  };
+  const handleOpenDisputeForm = (booking: Booking) => {
+    setSelectedBookingForDispute(booking);
+    setIsDisputeFormOpen(true);
+  };
+  const handleDisputeSuccess = () => {
+    setIsDisputeFormOpen(false);
+    setSelectedBookingForDispute(null);
+    // TODO: Refresh bookings list to reflect `DISPUTED` status
   };
   return (
     <>
@@ -40,7 +52,10 @@ export function DashboardPage() {
                 <TabsTrigger value="profile">Profile</TabsTrigger>
               </TabsList>
               <TabsContent value="bookings" className="mt-6">
-                <BookingsList onRateBooking={handleOpenRatingForm} />
+                <BookingsList
+                  onRateBooking={handleOpenRatingForm}
+                  onDisputeBooking={handleOpenDisputeForm}
+                />
               </TabsContent>
               <TabsContent value="offers" className="mt-6">
                 <OffersManagement />
@@ -60,6 +75,12 @@ export function DashboardPage() {
         onOpenChange={setIsRatingFormOpen}
         booking={selectedBookingForRating}
         onSuccess={handleRatingSuccess}
+      />
+      <DisputeForm
+        isOpen={isDisputeFormOpen}
+        onOpenChange={setIsDisputeFormOpen}
+        booking={selectedBookingForDispute}
+        onSuccess={handleDisputeSuccess}
       />
     </>
   );

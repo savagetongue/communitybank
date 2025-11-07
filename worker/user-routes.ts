@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import type { Env } from './core-utils';
-import { ok, bad, notFound, unauthorized } from './core-utils';
-import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity, ServiceRequestEntity, RatingEntity } from './entities';
-import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating } from "@shared/types";
+import { ok, bad, notFound, unauthorized, forbidden } from './core-utils';
+import { MemberEntity, OfferEntity, BookingEntity, LedgerEntryEntity, ServiceRequestEntity, RatingEntity, DisputeEntity } from './entities';
+import type { Member, Offer, Booking, LedgerEntry, ServiceRequest, Rating, Dispute } from "@shared/types";
 import { Context } from "hono";
 // --- Helper Functions ---
 // Simple (and insecure) password hashing. In a real app, use a library like bcrypt.
@@ -63,6 +63,13 @@ const authMiddleware = async (c: Context<AuthContext>, next: () => Promise<void>
     const member = await memberInstance.getState();
     c.set('currentUserId', userId);
     c.set('currentUser', member);
+    await next();
+};
+const adminMiddleware = async (c: Context<AuthContext>, next: () => Promise<void>) => {
+    const currentUser = c.get('currentUser');
+    if (!currentUser?.isAdmin) {
+        return forbidden(c, 'Administrator access required.');
+    }
     await next();
 };
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
@@ -159,7 +166,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
                       .use('/api/requests', authMiddleware)
                       .use('/api/bookings', authMiddleware)
                       .use('/api/bookings/*', authMiddleware)
-                      .use('/api/ratings', authMiddleware);
+                      .use('/api/ratings', authMiddleware)
+                      .use('/api/disputes', authMiddleware)
+                      .use('/api/admin/*', authMiddleware);
   app_auth.get('/api/me', async (c: Context<AuthContext>) => {
     const member = c.get('currentUser');
     const { passwordHash: _, ...memberData } = member;
@@ -320,6 +329,9 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         return notFound(c, 'Booking not found.');
     }
     const booking = await bookingInstance.getState();
+    if (booking.rated) {
+        return bad(c, 'This booking has already been rated.');
+    }
     // Determine who is being rated
     const ratedId = booking.providerId === raterId ? booking.memberId : booking.providerId;
     const newRating: Rating = {
@@ -332,7 +344,77 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         createdAt: new Date().toISOString(),
     };
     await RatingEntity.create(c.env as Env, newRating);
+    await bookingInstance.patch({ rated: true });
     // In a real app, you would also update the rated member's average rating here.
     return ok(c, newRating);
+  });
+  app_auth.post('/api/disputes', async (c: Context<AuthContext>) => {
+    const userId = c.get('currentUserId');
+    const { bookingId, reason } = await c.req.json();
+    if (!bookingId || !reason) {
+        return bad(c, 'Booking ID and reason are required.');
+    }
+    const bookingInstance = new BookingEntity(c.env as Env, bookingId);
+    if (!await bookingInstance.exists()) {
+        return notFound(c, 'Booking not found.');
+    }
+    const booking = await bookingInstance.getState();
+    if (booking.memberId !== userId && booking.providerId !== userId) {
+        return forbidden(c, 'You are not a party to this booking.');
+    }
+    const newDispute: Dispute = {
+        id: `dispute-${crypto.randomUUID()}`,
+        bookingId,
+        reason,
+        status: 'OPEN',
+        createdAt: new Date().toISOString(),
+    };
+    await DisputeEntity.create(c.env as Env, newDispute);
+    await bookingInstance.patch({ status: 'DISPUTED' });
+    return ok(c, newDispute);
+  });
+  // --- Admin Routes ---
+  const app_admin = app_auth.use('/api/admin/*', adminMiddleware);
+  app_admin.get('/api/admin/disputes', async (c) => {
+    const { items } = await DisputeEntity.list(c.env as Env);
+    return ok(c, items);
+  });
+  app_admin.post('/api/admin/disputes/:id/resolve', async (c: Context<AuthContext>) => {
+    const adminId = c.get('currentUserId');
+    const { id: disputeId } = c.req.param();
+    const { resolution, status } = await c.req.json();
+    if (!resolution || !status || !['RESOLVED', 'REJECTED'].includes(status)) {
+        return bad(c, 'Resolution and a valid status (RESOLVED/REJECTED) are required.');
+    }
+    const disputeInstance = new DisputeEntity(c.env as Env, disputeId);
+    if (!await disputeInstance.exists()) {
+        return notFound(c, 'Dispute not found.');
+    }
+    await disputeInstance.patch({ status, resolution, adminId });
+    return ok(c, await disputeInstance.getState());
+  });
+  app_admin.post('/api/admin/ledger-adjust', async (c: Context<AuthContext>) => {
+    const { memberId, amount, reason } = await c.req.json();
+    if (!memberId || amount === undefined || !reason) {
+        return bad(c, 'Member ID, amount, and reason are required.');
+    }
+    const memberInstance = new MemberEntity(c.env as Env, memberId);
+    if (!await memberInstance.exists()) {
+        return notFound(c, 'Member to adjust not found.');
+    }
+    const { items: memberLedger } = await LedgerEntryEntity.list(c.env as Env);
+    const lastEntry = memberLedger.filter(e => e.memberId === memberId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    const balanceBefore = lastEntry ? lastEntry.balanceAfter : 0;
+    const adjustmentEntry: LedgerEntry = {
+        id: `ledger-${crypto.randomUUID()}`,
+        memberId,
+        amount,
+        txnType: 'ADJUSTMENT',
+        balanceAfter: balanceBefore + amount,
+        notes: `Admin adjustment: ${reason}`,
+        createdAt: new Date().toISOString(),
+    };
+    await LedgerEntryEntity.create(c.env as Env, adjustmentEntry);
+    return ok(c, adjustmentEntry);
   });
 }

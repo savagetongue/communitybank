@@ -18,6 +18,7 @@ export interface Member {
   isProvider: boolean;
   createdAt: string;
   passwordHash?: string;
+  isAdmin?: boolean;
 }
 export interface Offer {
   id: string;
@@ -54,6 +55,7 @@ export interface Booking {
   offerTitle?: string;
   otherPartyName?: string;
   otherPartyAvatarUrl?: string;
+  rated?: boolean;
 }
 export interface Escrow {
   id: string;
@@ -90,4 +92,8 @@ export interface Dispute {
   resolution?: string;
   adminId?: string;
   createdAt: string;
+  evidence?: {
+    evidenceType: string;
+    uri: string;
+  }[];
 }

@@ -17,6 +17,8 @@ import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AdminPage } from './pages/AdminPage';
+import { AdminGuard } from './components/auth/AdminGuard';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -51,6 +53,16 @@ const router = createBrowserRouter([
         element: <DashboardPage />,
         errorElement: <RouteErrorBoundary />,
       },
+      {
+        element: <AdminGuard />,
+        children: [
+          {
+            path: "/admin",
+            element: <AdminPage />,
+            errorElement: <RouteErrorBoundary />,
+          }
+        ]
+      }
     ],
   },
 ]);

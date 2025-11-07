@@ -14,8 +14,9 @@ import { useAuthStore } from '@/stores/authStore';
 import { toast } from 'sonner';
 interface BookingsListProps {
   onRateBooking: (booking: Booking) => void;
+  onDisputeBooking: (booking: Booking) => void;
 }
-export function BookingsList({ onRateBooking }: BookingsListProps) {
+export function BookingsList({ onRateBooking, onDisputeBooking }: BookingsListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const user = useAuthStore(s => s.user);
@@ -94,7 +95,7 @@ export function BookingsList({ onRateBooking }: BookingsListProps) {
                   <TableCell>{format(new Date(booking.startTime), 'MMM d, yyyy')}</TableCell>
                   <TableCell className="hidden md:table-cell">{booking.durationMinutes} min</TableCell>
                   <TableCell>
-                    <Badge variant={booking.status === 'COMPLETED' ? 'default' : 'secondary'}>{booking.status}</Badge>
+                    <Badge variant={booking.status === 'COMPLETED' ? 'default' : booking.status === 'DISPUTED' ? 'destructive' : 'secondary'}>{booking.status}</Badge>
                   </TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -113,10 +114,15 @@ export function BookingsList({ onRateBooking }: BookingsListProps) {
                               Complete Service
                             </DropdownMenuItem>
                         )}
-                        {booking.status === 'COMPLETED' && (
+                        {booking.status === 'COMPLETED' && !booking.rated && (
                            <DropdownMenuItem onClick={() => onRateBooking(booking)}>
                              Leave a Rating
                            </DropdownMenuItem>
+                        )}
+                        {booking.status !== 'DISPUTED' && (
+                          <DropdownMenuItem className="text-destructive" onClick={() => onDisputeBooking(booking)}>
+                            Dispute
+                          </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
