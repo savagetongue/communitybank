@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { OfferCard } from '@/components/OfferCard';
-import { api } from '@/lib/api-client';
+import { getOffers } from '@/lib/mockApi';
 import type { Offer } from '@shared/types';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -12,14 +12,12 @@ export function OffersPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    api<Offer[]>('/api/offers')
+    getOffers()
       .then((data) => {
         setOffers(data);
-      })
-      .catch(console.error)
-      .finally(() => {
         setIsLoading(false);
-      });
+      })
+      .catch(console.error);
   }, []);
   return (
     <MainLayout>

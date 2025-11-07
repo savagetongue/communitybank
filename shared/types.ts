@@ -3,22 +3,80 @@ export interface ApiResponse<T = unknown> {
   data?: T;
   error?: string;
 }
-
-// Minimal real-world chat example types (shared by frontend and worker)
-export interface User {
+export interface Member {
   id: string;
   name: string;
+  email: string;
+  contact?: string;
+  avatarUrl?: string;
+  bio?: string;
+  rating: number;
+  isProvider: boolean;
+  createdAt: string;
 }
-
-export interface Chat {
+export interface Offer {
   id: string;
+  providerId: string;
+  provider?: Member; // Optional, for denormalized data
   title: string;
+  description: string;
+  skills: string[];
+  ratePerHour: number; // in time credits
+  isActive: boolean;
+  createdAt: string;
 }
-
-export interface ChatMessage {
+export interface ServiceRequest {
   id: string;
-  chatId: string;
-  userId: string;
-  text: string;
-  ts: number; // epoch millis
+  offerId: string;
+  memberId: string;
+  note?: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED';
+  createdAt: string;
+}
+export interface Booking {
+  id: string;
+  requestId: string;
+  providerId: string;
+  memberId: string;
+  startTime: string;
+  durationMinutes: number;
+  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+  escrowId: string;
+  createdAt: string;
+}
+export interface Escrow {
+  id: string;
+  bookingId: string;
+  amount: number;
+  status: 'HELD' | 'RELEASED' | 'REFUNDED';
+  createdAt: string;
+  updatedAt: string;
+}
+export interface LedgerEntry {
+  id: string;
+  memberId: string;
+  amount: number; // Can be positive (credit) or negative (debit)
+  txnType: 'CREDIT' | 'DEBIT' | 'ADJUSTMENT' | 'REFUND';
+  balanceAfter: number;
+  relatedBookingId?: string;
+  notes?: string;
+  createdAt: string;
+}
+export interface Rating {
+  id: string;
+  bookingId: string;
+  raterId: string;
+  ratedId: string;
+  score: 1 | 2 | 3 | 4 | 5;
+  comment?: string;
+  createdAt: string;
+}
+export interface Dispute {
+  id: string;
+  bookingId: string;
+  reason: string;
+  status: 'OPEN' | 'RESOLVED' | 'REJECTED';
+  resolution?: string;
+  adminId?: string;
+  createdAt: string;
 }
