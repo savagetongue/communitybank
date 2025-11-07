@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { OfferCard } from '@/components/OfferCard';
 import { getFeaturedOffers } from '@/lib/mockApi';
 import type { Offer } from '@shared/types';
 import { ArrowRight, Users, Repeat, Award } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';interface CardFooter {id?: string | number;[key: string]: unknown;}interface CardFooterProps {children?: React.ReactNode;className?: string;style?: React.CSSProperties;[key: string]: unknown;}
+import { Skeleton } from '@/components/ui/skeleton';
+import { Toaster } from '@/components/ui/sonner';
 export function HomePage() {
   const [featuredOffers, setFeaturedOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,9 +36,9 @@ export function HomePage() {
     title: 'Redeem Credits',
     description: 'Use your earned time credits to receive services from others in the community. One hour equals one credit.'
   }];
-
   return (
     <MainLayout>
+      <Toaster richColors closeButton />
       {}
       <section className="bg-secondary/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 md:py-32 text-center">
@@ -130,5 +131,4 @@ export function HomePage() {
         </div>
       </section>
     </MainLayout>);
-
 }

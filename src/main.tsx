@@ -13,6 +13,10 @@ import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
 import { OffersPage } from '@/pages/OffersPage';
 import { OfferDetailsPage } from '@/pages/OfferDetailsPage';
+import { LoginPage } from '@/pages/LoginPage';
+import { RegisterPage } from '@/pages/RegisterPage';
+import { DashboardPage } from '@/pages/DashboardPage';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 const router = createBrowserRouter([
   {
     path: "/",
@@ -28,6 +32,26 @@ const router = createBrowserRouter([
     path: "/offers/:id",
     element: <OfferDetailsPage />,
     errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/login",
+    element: <LoginPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/register",
+    element: <RegisterPage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    element: <AuthGuard />,
+    children: [
+      {
+        path: "/dashboard",
+        element: <DashboardPage />,
+        errorElement: <RouteErrorBoundary />,
+      },
+    ],
   },
 ]);
 // Do not touch this code
