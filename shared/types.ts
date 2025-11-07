@@ -17,13 +17,16 @@ export interface Member {
 export interface Offer {
   id: string;
   providerId: string;
-  provider?: Member; // Optional, for denormalized data
   title: string;
   description: string;
   skills: string[];
   ratePerHour: number; // in time credits
   isActive: boolean;
   createdAt: string;
+  // Denormalized provider data
+  providerName?: string;
+  providerAvatarUrl?: string;
+  providerRating?: number;
 }
 export interface ServiceRequest {
   id: string;

@@ -8,7 +8,7 @@ interface OfferCardProps {
   offer: Offer;
 }
 export function OfferCard({ offer }: OfferCardProps) {
-  const providerNameInitial = offer.provider?.name.charAt(0) || 'U';
+  const providerNameInitial = offer.providerName?.charAt(0) || 'U';
   return (
     <Link to={`/offers/${offer.id}`} className="block group">
       <Card className="h-full flex flex-col transition-all duration-200 hover:shadow-md hover:-translate-y-1">
@@ -26,10 +26,10 @@ export function OfferCard({ offer }: OfferCardProps) {
         <CardFooter className="flex justify-between items-center pt-4">
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
-              <AvatarImage src={offer.provider?.avatarUrl} alt={offer.provider?.name} />
+              <AvatarImage src={offer.providerAvatarUrl} alt={offer.providerName} />
               <AvatarFallback>{providerNameInitial}</AvatarFallback>
             </Avatar>
-            <span className="text-sm font-medium text-muted-foreground">{offer.provider?.name}</span>
+            <span className="text-sm font-medium text-muted-foreground">{offer.providerName}</span>
           </div>
           <div className="flex items-center gap-1 text-sm font-semibold text-foreground">
             <Clock className="h-4 w-4 text-brand" />

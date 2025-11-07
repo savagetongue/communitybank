@@ -4,7 +4,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { OfferCard } from '@/components/OfferCard';
-import { getFeaturedOffers } from '@/lib/mockApi';
+import { api } from '@/lib/api-client';
 import type { Offer } from '@shared/types';
 import { ArrowRight, Users, Repeat, Award } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,12 +13,14 @@ export function HomePage() {
   const [featuredOffers, setFeaturedOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
-    getFeaturedOffers().
-    then((data) => {
-      setFeaturedOffers(data);
-      setIsLoading(false);
-    }).
-    catch(console.error);
+    api<Offer[]>('/api/offers/featured')
+      .then((data) => {
+        setFeaturedOffers(data);
+      })
+      .catch(console.error)
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
   const howItWorksSteps = [
   {

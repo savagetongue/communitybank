@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { getOfferById } from '@/lib/mockApi';
+import { api } from '@/lib/api-client';
 import type { Offer } from '@shared/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -22,14 +22,16 @@ export function OfferDetailsPage() {
   const user = useAuthStore(s => s.user);
   useEffect(() => {
     if (id) {
-      getOfferById(id)
+      api<Offer>(`/api/offers/${id}`)
         .then((data) => {
           if (data) {
             setOffer(data);
           }
-          setIsLoading(false);
         })
-        .catch(console.error);
+        .catch(console.error)
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   }, [id]);
   const handleRequestSuccess = () => {
@@ -125,18 +127,18 @@ export function OfferDetailsPage() {
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4">
                       <Avatar className="h-16 w-16">
-                        <AvatarImage src={offer.provider?.avatarUrl} alt={offer.provider?.name} />
-                        <AvatarFallback>{offer.provider?.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={offer.providerAvatarUrl} alt={offer.providerName} />
+                        <AvatarFallback>{offer.providerName?.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold">{offer.provider?.name}</h3>
+                        <h3 className="font-semibold">{offer.providerName}</h3>
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                          <span>{offer.provider?.rating}</span>
+                          <span>{offer.providerRating}</span>
                         </div>
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{offer.provider?.bio}</p>
+                    {/* Bio is not denormalized yet, so we can't display it here. This is expected. */}
                   </CardContent>
                 </Card>
               </div>
