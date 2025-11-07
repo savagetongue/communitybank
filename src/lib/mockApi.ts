@@ -1,4 +1,5 @@
-import type { Member, Offer } from '@shared/types';
+import type { Member, Offer, Booking, LedgerEntry } from '@shared/types';
+import { add, sub } from 'date-fns';
 const mockProviders: Member[] = [
   {
     id: 'provider-1',
@@ -99,9 +100,84 @@ const mockOffers: Offer[] = [
     description: 'Professional and stylish business card design that reflects your brand identity.',
     skills: ['Graphic Design', 'Print Design'],
     ratePerHour: 0.5,
-    isActive: true,
+    isActive: false,
     createdAt: new Date().toISOString(),
   },
+];
+const mockBookings: Booking[] = [
+  {
+    id: 'booking-1',
+    requestId: 'req-1',
+    providerId: 'provider-1',
+    memberId: 'user-demo',
+    startTime: add(new Date(), { days: 3 }).toISOString(),
+    durationMinutes: 60,
+    status: 'CONFIRMED',
+    escrowId: 'esc-1',
+    createdAt: new Date().toISOString(),
+    offerTitle: 'React Component Development',
+    otherPartyName: 'Alice Johnson',
+    otherPartyAvatarUrl: 'https://i.pravatar.cc/150?u=alice',
+  },
+  {
+    id: 'booking-2',
+    requestId: 'req-2',
+    providerId: 'user-demo',
+    memberId: 'provider-2',
+    startTime: sub(new Date(), { days: 5 }).toISOString(),
+    durationMinutes: 90,
+    status: 'COMPLETED',
+    escrowId: 'esc-2',
+    createdAt: sub(new Date(), { days: 7 }).toISOString(),
+    offerTitle: 'My Custom Offer',
+    otherPartyName: 'Bob Williams',
+    otherPartyAvatarUrl: 'https://i.pravatar.cc/150?u=bob',
+  },
+  {
+    id: 'booking-3',
+    requestId: 'req-3',
+    providerId: 'provider-3',
+    memberId: 'user-demo',
+    startTime: sub(new Date(), { days: 10 }).toISOString(),
+    durationMinutes: 45,
+    status: 'COMPLETED',
+    escrowId: 'esc-3',
+    createdAt: sub(new Date(), { days: 12 }).toISOString(),
+    offerTitle: 'Blog Post Writing (500 words)',
+    otherPartyName: 'Charlie Brown',
+    otherPartyAvatarUrl: 'https://i.pravatar.cc/150?u=charlie',
+  },
+];
+const mockLedger: LedgerEntry[] = [
+    {
+        id: 'ledger-1',
+        memberId: 'user-demo',
+        amount: 10,
+        txnType: 'CREDIT',
+        balanceAfter: 10,
+        notes: 'Initial account credit',
+        createdAt: sub(new Date(), { days: 30 }).toISOString(),
+    },
+    {
+        id: 'ledger-2',
+        memberId: 'user-demo',
+        amount: -0.75,
+        txnType: 'DEBIT',
+        balanceAfter: 9.25,
+        relatedBookingId: 'booking-3',
+        notes: 'For "Blog Post Writing (500 words)"',
+        createdAt: sub(new Date(), { days: 10 }).toISOString(),
+    },
+    {
+        id: 'ledger-3',
+        memberId: 'user-demo',
+        amount: 1.5,
+        txnType: 'CREDIT',
+        balanceAfter: 10.75,
+        relatedBookingId: 'booking-2',
+        notes: 'For "My Custom Offer"',
+        createdAt: sub(new Date(), { days: 5 }).toISOString(),
+    },
 ];
 const providersMap = new Map(mockProviders.map(p => [p.id, p]));
 const offersWithProviders: Offer[] = mockOffers.map(offer => ({
@@ -121,4 +197,17 @@ export const getFeaturedOffers = (): Promise<Offer[]> => {
 export const getOfferById = (id: string): Promise<Offer | undefined> => {
   const offer = offersWithProviders.find(o => o.id === id);
   return simulateDelay(offer);
+};
+export const getBookingsByUserId = (userId: string): Promise<Booking[]> => {
+    const bookings = mockBookings.filter(b => b.memberId === userId || b.providerId === userId);
+    return simulateDelay(bookings);
+};
+export const getOffersByProviderId = (providerId: string): Promise<Offer[]> => {
+    const offers = mockOffers.filter(o => o.providerId === providerId);
+    return simulateDelay(offers);
+};
+export const getLedgerByUserId = (userId: string): Promise<{ entries: LedgerEntry[], balance: number }> => {
+    const entries = mockLedger.filter(l => l.memberId === userId).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const balance = entries.length > 0 ? entries[0].balanceAfter : 0;
+    return simulateDelay({ entries, balance });
 };
